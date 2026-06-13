@@ -93,6 +93,11 @@ public static class OverMyDeadBodyBuilder
         mgr.corpseLayer = groundLayer;
         mgr.corpseSortingOrder = 5;
 
+        // 技能卡系統 (示範場景牌庫留空 = 無技能,維持原本玩法)
+        var skills = gm.AddComponent<CorpseSkillSystem>();
+        skills.groundLayer = groundLayer;
+        mgr.skillSystem = skills;
+
         // ---- 存檔 ----
         if (!Directory.Exists("Assets/Scenes")) Directory.CreateDirectory("Assets/Scenes");
         EditorSceneManager.SaveScene(scene, ScenePath);

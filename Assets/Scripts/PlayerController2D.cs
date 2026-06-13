@@ -32,6 +32,7 @@ public class PlayerController2D : MonoBehaviour
     private float _moveInput;
     private bool _jumpRequested;
     private bool _isGrounded;
+    private Collider2D _groundCollider;
 
     private void Awake()
     {
@@ -76,6 +77,8 @@ public class PlayerController2D : MonoBehaviour
     {
         _moveAction.Enable();
         _jumpAction.Enable();
+        // 重新啟用時清除殘留的跳躍請求 (例如選卡暫停期間誤觸的跳)
+        _jumpRequested = false;
     }
 
     private void OnDisable()
@@ -103,9 +106,10 @@ public class PlayerController2D : MonoBehaviour
 
     private void FixedUpdate()
     {
-        // 地面偵測
+        // 地面偵測 (記錄踩到的 collider,供彈跳屍體判定)
         Vector2 checkPos = (Vector2)transform.position + groundCheckOffset;
-        _isGrounded = Physics2D.OverlapCircle(checkPos, groundCheckRadius, groundLayer);
+        _groundCollider = Physics2D.OverlapCircle(checkPos, groundCheckRadius, groundLayer);
+        _isGrounded = _groundCollider != null;
 
         // 水平移動:直接設定 X 速度,保留重力造成的 Y 速度
         Vector2 velocity = _rb.linearVelocity;
@@ -118,8 +122,16 @@ public class PlayerController2D : MonoBehaviour
             _jumpRequested = false;
             if (_isGrounded)
             {
+                // 彈跳屍體:若踩在帶有 CorpseSkill_Bounce 的平台上,跳躍力加倍
+                float force = jumpForce;
+                if (_groundCollider != null)
+                {
+                    var bounce = _groundCollider.GetComponent<CorpseSkill_Bounce>();
+                    if (bounce != null) force *= bounce.jumpMultiplier;
+                }
+
                 Vector2 v = _rb.linearVelocity;
-                v.y = jumpForce;
+                v.y = force;
                 _rb.linearVelocity = v;
             }
         }
