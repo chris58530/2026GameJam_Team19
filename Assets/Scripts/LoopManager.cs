@@ -3,17 +3,24 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 「Over My Dead Body」按鈕輪迴關卡管理器。
-/// - 每輪 loopTime 秒;時間到或按 K → 在原地留下殘影、玩家回起點、輪數+1、計時重置。
-/// - 殘影是實體平台 (可踩),也能壓住按鈕。
-/// - A/B/C 三按鈕同時被壓下 → 門開;門開時玩家走到門口即通關。
+/// 「Over My Dead Body」按鈕輪迴關卡管理器 (整合技能卡系統)。
+/// - 每輪開始先抽卡選技能 (透過 CorpseSkillSystem);選定後才開始這一輪。
+/// - 每輪 loopTime 秒;時間到或按 K → 在原地留下殘影 (帶本輪選的技能)、玩家回起點、輪數+1。
+/// - 殘影是實體平台 (可踩),也能壓住按鈕;若選到移動/傳送等技能會有對應行為。
+/// - A/B/C 按鈕同時被壓下 → 門開;門開時玩家走到門口即通關。
+/// - 碰到 Hazard 傷害區域 → 宣告失敗,顯示文字後整關重來。
 /// - R 從第 1 輪重來。
+///
+/// 技能系統為可選:若場上沒有 CorpseSkillSystem 或牌庫為空,維持原本無技能玩法。
 /// </summary>
-public class LoopManager : MonoBehaviour
+public class LoopManager : MonoBehaviour, ILevelFailHandler
 {
     [Header("場景參考")]
     public Transform spawnPoint;
     public PressButton[] buttons;
+
+    [Tooltip("技能卡系統 (可選)。留空會自動在自身或場景中尋找。")]
+    public CorpseSkillSystem skillSystem;
 
     [Header("殘影設定")]
     public Sprite ghostSprite;
@@ -30,6 +37,10 @@ public class LoopManager : MonoBehaviour
     [Header("輪迴設定")]
     public float loopTime = 10f;
 
+    [Header("失敗設定")]
+    [Tooltip("顯示失敗文字的秒數,結束後整關重來")]
+    public float failDisplayTime = 1.5f;
+
     public float TimeLeft { get; private set; }
     public int LoopCount { get; private set; } = 1;
     public bool Won { get; private set; }
@@ -40,6 +51,10 @@ public class LoopManager : MonoBehaviour
     private Rigidbody2D _rb;
     private PlayerController2D _pc;
     private readonly List<GameObject> _ghosts = new List<GameObject>();
+
+    private bool _failed;
+    private float _failTimer;
+    private string _failReason = "";
 
     private void Start()
     {
@@ -54,7 +69,14 @@ public class LoopManager : MonoBehaviour
             int g = LayerMask.NameToLayer("Ground");
             if (g >= 0) ghostLayer = g;
         }
+        if (skillSystem == null)
+        {
+            skillSystem = GetComponent<CorpseSkillSystem>();
+            if (skillSystem == null) skillSystem = FindAnyObjectByType<CorpseSkillSystem>();
+        }
+
         TimeLeft = loopTime;
+        BeginLife();
     }
 
     private void Update()
@@ -66,6 +88,17 @@ public class LoopManager : MonoBehaviour
             ResetLevel();
             return;
         }
+
+        // 失敗中:倒數後整關重來
+        if (_failed)
+        {
+            _failTimer -= Time.unscaledDeltaTime;
+            if (_failTimer <= 0f) ResetLevel();
+            return;
+        }
+
+        // 選卡中:暫停本管理器邏輯,交給技能系統處理
+        if (skillSystem != null && skillSystem.IsBusy) return;
 
         // 按鈕狀態 / 門
         PressedCount = 0;
@@ -84,19 +117,37 @@ public class LoopManager : MonoBehaviour
             LeaveGhostAndRespawn();
     }
 
+    /// <summary>開始新的一輪:先抽卡選技能,選定後才開始計時遊玩。</summary>
+    private void BeginLife()
+    {
+        if (skillSystem == null)
+            return; // 無技能系統 → 直接遊玩
+
+        if (_pc != null) _pc.enabled = false;
+        skillSystem.BeginSelection(_ =>
+        {
+            if (_pc != null) _pc.enabled = true;
+        });
+    }
+
     private void LeaveGhostAndRespawn()
     {
         if (_player == null || spawnPoint == null) return;
 
-        SpawnGhost(_player.transform.position);
+        var ghost = SpawnGhost(_player.transform.position);
+        if (skillSystem != null && ghost != null)
+            skillSystem.ApplySkill(ghost, skillSystem.ArmedSkill);
+
         _player.transform.position = spawnPoint.position;
         if (_rb != null) _rb.linearVelocity = Vector2.zero;
 
         TimeLeft = loopTime;
         LoopCount++;
+
+        BeginLife(); // 抽下一輪的技能
     }
 
-    private void SpawnGhost(Vector3 pos)
+    private GameObject SpawnGhost(Vector3 pos)
     {
         var go = new GameObject("Ghost_" + (_ghosts.Count + 1));
         go.transform.position = pos;
@@ -117,6 +168,7 @@ public class LoopManager : MonoBehaviour
 
         go.AddComponent<Ghost>();
         _ghosts.Add(go);
+        return go;
     }
 
     /// <summary>由門呼叫:門開時玩家進門即通關。</summary>
@@ -125,9 +177,24 @@ public class LoopManager : MonoBehaviour
         if (!Won && DoorOpen)
         {
             Won = true;
+            Time.timeScale = 1f;
             if (_rb != null) _rb.linearVelocity = Vector2.zero;
             if (_pc != null) _pc.enabled = false;
         }
+    }
+
+    /// <summary>ILevelFailHandler:非自身機制死亡 (如踏入 Hazard) → 失敗後整關重來。</summary>
+    public void FailLevel(string reason)
+    {
+        if (_failed || Won) return;
+
+        _failed = true;
+        _failReason = reason;
+        _failTimer = failDisplayTime;
+
+        Time.timeScale = 1f;
+        if (_pc != null) _pc.enabled = false;
+        if (_rb != null) _rb.linearVelocity = Vector2.zero;
     }
 
     public void ResetLevel()
@@ -141,12 +208,42 @@ public class LoopManager : MonoBehaviour
         Won = false;
         DoorOpen = false;
         PressedCount = 0;
+        _failed = false;
+        _failReason = "";
 
+        Time.timeScale = 1f;
         if (_pc != null) _pc.enabled = true;
         if (_player != null && spawnPoint != null)
         {
             _player.transform.position = spawnPoint.position;
             if (_rb != null) _rb.linearVelocity = Vector2.zero;
+        }
+
+        BeginLife();
+    }
+
+    private void OnGUI()
+    {
+        if (_failed)
+        {
+            var big = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 70,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
+            big.normal.textColor = new Color(1f, 0.3f, 0.3f);
+            GUI.Label(new Rect(0, Screen.height * 0.34f, Screen.width, 100), "FAILED", big);
+
+            var sub = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 26,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
+            sub.normal.textColor = Color.white;
+            GUI.Label(new Rect(0, Screen.height * 0.50f, Screen.width, 40),
+                _failReason + "   重新開始...", sub);
         }
     }
 }
