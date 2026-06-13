@@ -9,8 +9,8 @@ public enum CorpseSkillType
     /// <summary>普通屍體,單純當作可踩的平台。</summary>
     Normal,
 
-    /// <summary>彈跳:站在這具屍體上按跳,跳躍力加倍。</summary>
-    Bounce,
+    /// <summary>加速:碰撞器接觸到這具屍體時,玩家移動/跳躍速度倍增 (X/Y 可設);離開後隨時間遞減回原速。</summary>
+    Speed,
 
     /// <summary>左右橫擺:屍體沿水平方向來回移動,碰到障礙物提前折返。</summary>
     HorizontalSway,
@@ -48,7 +48,7 @@ public static class CorpseSkillNames
         switch (type)
         {
             case CorpseSkillType.Normal: return "普通";
-            case CorpseSkillType.Bounce: return "彈跳";
+            case CorpseSkillType.Speed: return "加速";
             case CorpseSkillType.HorizontalSway: return "左右橫擺";
             case CorpseSkillType.VerticalSway: return "上下搖擺";
             case CorpseSkillType.TeleportDown: return "向下傳送";

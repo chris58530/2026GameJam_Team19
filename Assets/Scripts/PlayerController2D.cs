@@ -34,6 +34,20 @@ public class PlayerController2D : MonoBehaviour
     private bool _isGrounded;
     private Collider2D _groundCollider;
 
+    // 速度加速 (來自加速屍體):X = 水平移動倍率, Y = 跳躍力倍率
+    private Vector2 _speedMul = Vector2.one;
+    private float _boostDecay = 2f;
+    private Vector2 _pendingBoost = Vector2.one;
+    private bool _hasPendingBoost;
+
+    /// <summary>由加速屍體呼叫:接觸期間每物理幀刷新,維持滿倍率。</summary>
+    public void RefreshSpeedBoost(Vector2 multiplier, float decayPerSecond)
+    {
+        _pendingBoost = multiplier;
+        _boostDecay = decayPerSecond;
+        _hasPendingBoost = true;
+    }
+
     private void Awake()
     {
         _rb = GetComponent<Rigidbody2D>();
@@ -106,32 +120,36 @@ public class PlayerController2D : MonoBehaviour
 
     private void FixedUpdate()
     {
-        // 地面偵測 (記錄踩到的 collider,供彈跳屍體判定)
+        // 地面偵測 (記錄踩到的 collider)
         Vector2 checkPos = (Vector2)transform.position + groundCheckOffset;
         _groundCollider = Physics2D.OverlapCircle(checkPos, groundCheckRadius, groundLayer);
         _isGrounded = _groundCollider != null;
 
-        // 水平移動:直接設定 X 速度,保留重力造成的 Y 速度
+        // 速度加速:接觸加速屍體期間維持滿倍率,離開後逐軸遞減回 1
+        if (_hasPendingBoost)
+        {
+            _speedMul = _pendingBoost;
+            _hasPendingBoost = false;
+        }
+        else
+        {
+            _speedMul.x = Mathf.MoveTowards(_speedMul.x, 1f, _boostDecay * Time.fixedDeltaTime);
+            _speedMul.y = Mathf.MoveTowards(_speedMul.y, 1f, _boostDecay * Time.fixedDeltaTime);
+        }
+
+        // 水平移動:套用 X 倍率,保留重力造成的 Y 速度
         Vector2 velocity = _rb.linearVelocity;
-        velocity.x = _moveInput * moveSpeed;
+        velocity.x = _moveInput * moveSpeed * _speedMul.x;
         _rb.linearVelocity = velocity;
 
-        // 跳躍:只在地面上才允許
+        // 跳躍:只在地面上才允許,跳躍力套用 Y 倍率
         if (_jumpRequested)
         {
             _jumpRequested = false;
             if (_isGrounded)
             {
-                // 彈跳屍體:若踩在帶有 CorpseSkill_Bounce 的平台上,跳躍力加倍
-                float force = jumpForce;
-                if (_groundCollider != null)
-                {
-                    var bounce = _groundCollider.GetComponent<CorpseSkill_Bounce>();
-                    if (bounce != null) force *= bounce.jumpMultiplier;
-                }
-
                 Vector2 v = _rb.linearVelocity;
-                v.y = force;
+                v.y = jumpForce * _speedMul.y;
                 _rb.linearVelocity = v;
             }
         }

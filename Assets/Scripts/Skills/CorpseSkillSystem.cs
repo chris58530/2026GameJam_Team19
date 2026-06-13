@@ -25,8 +25,11 @@ public class CorpseSkillSystem : MonoBehaviour
     public int displayCount = 3;
 
     [Header("技能參數")]
-    [Tooltip("彈跳屍體的跳躍力倍率")]
-    public float bounceMultiplier = 2f;
+    [Tooltip("加速倍率 (X = 水平移動速度, Y = 跳躍力)")]
+    public Vector2 speedMultiplier = new Vector2(2f, 2f);
+
+    [Tooltip("加速離開後每秒遞減的倍率量 (例如 2 = 0.5 秒回到原速)")]
+    public float speedDecayPerSecond = 2f;
 
     [Tooltip("移動屍體的單程距離")]
     public float moverDistance = 3f;
@@ -39,7 +42,7 @@ public class CorpseSkillSystem : MonoBehaviour
 
     [Header("屍體顏色 (依技能區分,會保留原本透明度)")]
     public Color colorNormal = new Color(0.8f, 0.35f, 0.35f);
-    public Color colorBounce = new Color(0.35f, 0.85f, 0.4f);
+    public Color colorSpeed = new Color(0.35f, 0.85f, 0.4f);
     public Color colorHorizontal = new Color(0.4f, 0.6f, 0.95f);
     public Color colorVertical = new Color(0.95f, 0.75f, 0.3f);
     public Color colorTeleport = new Color(0.75f, 0.4f, 0.9f);
@@ -184,9 +187,9 @@ public class CorpseSkillSystem : MonoBehaviour
 
         switch (skill)
         {
-            case CorpseSkillType.Bounce:
-                var bounce = corpse.AddComponent<CorpseSkill_Bounce>();
-                bounce.jumpMultiplier = bounceMultiplier;
+            case CorpseSkillType.Speed:
+                var spd = corpse.AddComponent<CorpseSkill_Speed>();
+                spd.Configure(speedMultiplier, speedDecayPerSecond);
                 break;
 
             case CorpseSkillType.HorizontalSway:
@@ -216,7 +219,7 @@ public class CorpseSkillSystem : MonoBehaviour
     {
         switch (skill)
         {
-            case CorpseSkillType.Bounce: return colorBounce;
+            case CorpseSkillType.Speed: return colorSpeed;
             case CorpseSkillType.HorizontalSway: return colorHorizontal;
             case CorpseSkillType.VerticalSway: return colorVertical;
             case CorpseSkillType.TeleportDown: return colorTeleport;
