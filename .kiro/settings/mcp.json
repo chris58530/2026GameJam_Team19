@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "ai-game-developer": {
+      "disabled": false,
+      "type": "streamable-http",
+      "url": "https://ai-game.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer kUxjMAg-nXAEb11MWOgfEqbdpM__EykdDS_wybHGvI0"
+      }
+    },
+    "unity-mcp": {
+      "disabled": false,
+      "type": "streamable-http",
+      "url": "http://localhost:29159",
+      "autoApprove": [
+        "*",
+        "gameobject-component-get",
+        "gameobject-component-get",
+        "gameobject-component-get",
+        "gameobject-component-get"
+      ]
+    }
+  }
+}

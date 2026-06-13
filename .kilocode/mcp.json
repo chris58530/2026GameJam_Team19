@@ -3,7 +3,10 @@
     "ai-game-developer": {
       "disabled": false,
       "type": "streamable-http",
-      "url": "http://localhost:23528"
+      "url": "https://ai-game.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer kUxjMAg-nXAEb11MWOgfEqbdpM__EykdDS_wybHGvI0"
+      }
     }
   }
 }
