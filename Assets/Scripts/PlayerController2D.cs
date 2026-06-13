@@ -38,6 +38,19 @@ public class PlayerController2D : MonoBehaviour
         _rb = GetComponent<Rigidbody2D>();
         _rb.freezeRotation = true;
 
+        // 零摩擦力材質:避免貼牆時被摩擦力「黏」在牆上而緩慢下滑。
+        // Box2D 摩擦力為 sqrt(a*b),玩家這邊設 0,對任何牆面組合後都會是 0。
+        var col = GetComponent<Collider2D>();
+        if (col != null)
+        {
+            var noFriction = new PhysicsMaterial2D("Player_NoFriction")
+            {
+                friction = 0f,
+                bounciness = 0f
+            };
+            col.sharedMaterial = noFriction;
+        }
+
         // 水平移動 (A/D 與 左右方向鍵)
         _moveAction = new InputAction("Move", InputActionType.Value, expectedControlType: "Axis");
         _moveAction.AddCompositeBinding("1DAxis")
