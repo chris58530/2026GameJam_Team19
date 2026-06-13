@@ -59,6 +59,26 @@ public static class OverMyDeadBodyLoopBuilder
         door.GetComponent<BoxCollider2D>().isTrigger = true;
         door.AddComponent<LoopDoorExit>();
 
+        // ---- 閘門機關 (Gate prefab 範例:A/B/C 三鈕全壓才開,擋在門口) ----
+        var gatePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Gate.prefab");
+        if (gatePrefab != null)
+        {
+            var gate = (GameObject)PrefabUtility.InstantiatePrefab(gatePrefab);
+            gate.name = "DoorGate";
+            gate.transform.position = new Vector3(7.3f, -5.0f, 0f);
+            gate.transform.localScale = new Vector3(0.6f, 2.6f, 1f);
+            var mech = gate.GetComponent<Mechanism>();
+            mech.triggers = new[]
+            {
+                btnA.GetComponent<PressButton>(),
+                btnB.GetComponent<PressButton>(),
+                btnC.GetComponent<PressButton>()
+            };
+            mech.requireAll = true;
+            mech.direction = OpenDirection.Up;
+            mech.distance = 2.7f;
+        }
+
         // ---- 重生點 ----
         var spawn = new GameObject("SpawnPoint");
         spawn.transform.position = new Vector3(-8.75f, -5.75f, 0f);
