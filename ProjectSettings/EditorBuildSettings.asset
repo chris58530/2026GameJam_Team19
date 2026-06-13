@@ -12,7 +12,10 @@ EditorBuildSettings:
     path: Assets/Scenes/LoadingScene.unity
     guid: 3431583541e993c488ddd9b93b21d690
   - enabled: 1
-    path: Assets/Scenes/Platformer2D.unity
-    guid: c329ad6fe51ad478aa9bb7bc03bbd6ee
+    path: Assets/Scenes/LevelSelectorScene.unity
+    guid: d888dba6af33eb545b19cf5ffc902006
+  - enabled: 1
+    path: Assets/Scenes/GameScene.unity
+    guid: 55d9099d00bb4aa29766189fc60c64bd
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

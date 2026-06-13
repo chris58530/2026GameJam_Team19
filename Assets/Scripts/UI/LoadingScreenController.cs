@@ -8,6 +8,10 @@ using TMPro;
 /// 掛在 LoadingScene 中的控制器。
 /// 讀取 SceneLoadManager.TargetSceneName，非同步載入目標場景。
 /// 
+/// 注意：
+///   - LoadingScene 只負責載入「場景」（MainMenuScene, LevelSelectorScene, GameScene）
+///   - 關卡 Prefab 的實例化由 GameSceneController 在 GameScene 載入後處理
+/// 
 /// Inspector 設定：
 ///   - progressBar: UI Slider（顯示進度）
 ///   - loadingText: TMP_Text（顯示 "Loading..." 或百分比）
@@ -25,6 +29,9 @@ public class LoadingScreenController : MonoBehaviour
     [Tooltip("是否顯示百分比數字")]
     [SerializeField] private bool showPercentage = true;
 
+    [Tooltip("最短顯示時間（秒），避免 Loading 畫面一閃而過")]
+    [SerializeField] private float minimumLoadTime = 0.5f;
+
     [Tooltip("如果目標場景為空，回退到此場景")]
     [SerializeField] private string fallbackSceneName = "MainMenuScene";
 
@@ -40,7 +47,7 @@ public class LoadingScreenController : MonoBehaviour
 
         if (SceneLoadManager.Instance != null)
         {
-            targetScene = SceneLoadManager.Instance.TargetSceneName;
+            targetScene = SceneLoadManager.Instance.GetTargetSceneName();
         }
 
         if (string.IsNullOrEmpty(targetScene))
@@ -48,6 +55,9 @@ public class LoadingScreenController : MonoBehaviour
             Debug.LogWarning("[LoadingScreenController] 沒有設定目標場景，回退到：" + fallbackSceneName);
             targetScene = fallbackSceneName;
         }
+
+        // 記錄開始時間
+        float startTime = Time.realtimeSinceStartup;
 
         // 開始非同步載入
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(targetScene);
@@ -58,7 +68,6 @@ public class LoadingScreenController : MonoBehaviour
             yield break;
         }
 
-        // 不自動啟動場景，等進度到 0.9 後再啟動
         asyncLoad.allowSceneActivation = false;
 
         while (!asyncLoad.isDone)
@@ -81,11 +90,15 @@ public class LoadingScreenController : MonoBehaviour
                     loadingText.text = "Loading...";
             }
 
-            // 載入完成，啟動場景
+            // 載入完成，確保最短顯示時間
             if (asyncLoad.progress >= 0.9f)
             {
-                // 短暫延遲讓玩家看到 100%
-                yield return new WaitForSeconds(0.3f);
+                float elapsed = Time.realtimeSinceStartup - startTime;
+                if (elapsed < minimumLoadTime)
+                {
+                    yield return new WaitForSecondsRealtime(minimumLoadTime - elapsed);
+                }
+
                 asyncLoad.allowSceneActivation = true;
             }
 
