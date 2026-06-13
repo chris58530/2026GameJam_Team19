@@ -63,8 +63,10 @@ public class PlayerController2D : MonoBehaviour
             .With("Negative", "<Gamepad>/leftStick/left")
             .With("Positive", "<Gamepad>/leftStick/right");
 
-        // 跳躍 (空白鍵 / 手把 A 鍵)
+        // 跳躍 (W / 空白鍵 / 手把 A 鍵)
         _jumpAction = new InputAction("Jump", InputActionType.Button);
+        _jumpAction.AddBinding("<Keyboard>/w");
+        _jumpAction.AddBinding("<Keyboard>/upArrow");
         _jumpAction.AddBinding("<Keyboard>/space");
         _jumpAction.AddBinding("<Gamepad>/buttonSouth");
         _jumpAction.performed += OnJumpPerformed;
