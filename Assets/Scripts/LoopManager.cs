@@ -19,6 +19,10 @@ public class LoopManager : MonoBehaviour
     public Sprite ghostSprite;
     public Color ghostColor = new Color(0.85f, 0.3f, 0.3f, 0.7f);
     public Vector2 ghostScale = Vector2.one;
+    [Tooltip("殘影碰撞體大小 (世界單位)。與玩家碰撞體一致,不受殘影圖片大小影響。")]
+    public Vector2 ghostColliderSize = Vector2.one;
+    [Tooltip("殘影是否上下顛倒 (倒立)。玩家圖片變成殘影時翻轉。")]
+    public bool ghostFlipY = true;
     [Tooltip("殘影圖層 (應為 Ground,才能當平台被踩)")]
     public int ghostLayer;
     public int ghostSortingOrder = 5;
@@ -103,8 +107,14 @@ public class LoopManager : MonoBehaviour
         sr.sprite = ghostSprite;
         sr.color = ghostColor;
         sr.sortingOrder = ghostSortingOrder;
+        sr.flipY = ghostFlipY;   // 殘影上下顛倒 (玩家圖片倒立)
 
-        go.AddComponent<BoxCollider2D>();
+        var col = go.AddComponent<BoxCollider2D>();
+        // 維持殘影碰撞體為固定世界大小 (與玩家一致),抵銷縮放與大圖的影響
+        float sx = Mathf.Approximately(ghostScale.x, 0f) ? 1f : Mathf.Abs(ghostScale.x);
+        float sy = Mathf.Approximately(ghostScale.y, 0f) ? 1f : Mathf.Abs(ghostScale.y);
+        col.size = new Vector2(ghostColliderSize.x / sx, ghostColliderSize.y / sy);
+
         go.AddComponent<Ghost>();
         _ghosts.Add(go);
     }
