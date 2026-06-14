@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using DG.Tweening;
 
 /// <summary>
@@ -61,10 +62,24 @@ public static class JuiceFX
         return _alphaMat;
     }
 
+    private static Sprite _softSprite;
+
+    /// <summary>柔邊圓點 Sprite (給 UI 粒子的 Image 使用)。</summary>
+    public static Sprite SoftSprite()
+    {
+        if (_softSprite != null) return _softSprite;
+        var tex = SoftTex();
+        _softSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
+            new Vector2(0.5f, 0.5f), tex.width);
+        _softSprite.name = "JuiceFX_SoftSprite";
+        return _softSprite;
+    }
+
     // ───────────────────────── 粒子 ─────────────────────────
 
     /// <summary>
     /// 在指定位置噴出一圈粒子 (一次性爆發,播完自動銷毀)。
+    /// unscaled=true 時用未縮放時間,讓粒子在 Time.timeScale=0 (例如抽卡暫停) 也能播。
     /// </summary>
     public static void Burst(
         Vector3 position,
@@ -74,7 +89,8 @@ public static class JuiceFX
         float size = 0.25f,
         float lifetime = 0.5f,
         float gravity = 0f,
-        int sortingOrder = 50)
+        int sortingOrder = 50,
+        bool unscaled = false)
     {
         var go = new GameObject("FX_Burst");
         go.transform.position = position;
@@ -92,6 +108,7 @@ public static class JuiceFX
         main.startColor = color;
         main.gravityModifier = gravity;
         main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.useUnscaledTime = unscaled; // 抽卡 (timeScale=0) 時仍要能播
         main.stopAction = ParticleSystemStopAction.Destroy; // 系統結束後自動銷毀整個物件
 
         var emission = ps.emission;
@@ -135,6 +152,16 @@ public static class JuiceFX
             size: 0.26f,
             lifetime: 0.45f,
             gravity: 0.12f);
+    }
+
+    /// <summary>
+    /// 死亡爆裂:一團彩色碎片向外炸開 + 一圈白色閃光粒子。
+    /// 用於「失敗死亡」(踏入 Hazard / 掉出區域) 的視覺表現。
+    /// </summary>
+    public static void DeathBurst(Vector3 position, Color tint)
+    {
+        Burst(position, tint, count: 28, speed: 7.5f, size: 0.32f, lifetime: 0.6f, gravity: 0.7f);
+        Burst(position, Color.white, count: 12, speed: 5f, size: 0.28f, lifetime: 0.4f, gravity: 0f);
     }
 
     private static ParticleSystem.MinMaxGradient FadeGradient(Color c)
@@ -196,5 +223,36 @@ public static class JuiceFX
         var shake = cam.GetComponent<ScreenShake>();
         if (shake == null) shake = cam.gameObject.AddComponent<ScreenShake>();
         shake.Shake(strength, duration);
+    }
+
+    // ───────────────────────── 全螢幕閃光 ─────────────────────────
+
+    /// <summary>
+    /// 全螢幕色閃 (例如失敗時的紅閃)。建立一個獨立的 Overlay Canvas + Image,
+    /// 從指定顏色淡出後自動銷毀。不接收點擊、不影響任何邏輯或 Collider。
+    /// 使用 unscaled 時間,即使遊戲暫停 (timeScale=0) 也能播。
+    /// </summary>
+    public static void ScreenFlash(Color color, float duration = 0.45f)
+    {
+        var go = new GameObject("FX_ScreenFlash");
+
+        var canvas = go.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 5000;
+
+        var img = go.AddComponent<Image>();
+        img.raycastTarget = false;
+        img.color = color;
+
+        var rt = img.rectTransform;
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+
+        img.DOFade(0f, duration)
+            .SetUpdate(true)
+            .SetEase(Ease.OutQuad)
+            .OnComplete(() => Object.Destroy(go));
     }
 }

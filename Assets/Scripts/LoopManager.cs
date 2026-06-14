@@ -317,6 +317,16 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
         if (SoundManager.Instance != null)
             SoundManager.Instance.PlaySFX("Fail");
 
+        // 失敗死亡的視覺回饋 (純視覺,不影響邏輯/碰撞):
+        // 玩家位置爆裂粒子 + 螢幕震動 + 紅色全螢幕閃光,並隱藏主角圖片。
+        if (_player != null)
+        {
+            JuiceFX.DeathBurst(_player.transform.position, new Color(1f, 0.35f, 0.25f, 1f));
+            if (_pc != null) _pc.SetRendererVisible(false);
+        }
+        JuiceFX.Shake(0.42f, 0.35f);
+        JuiceFX.ScreenFlash(new Color(0.7f, 0f, 0f, 0.45f), 0.5f);
+
         Time.timeScale = 1f;
         if (_pc != null) _pc.enabled = false;
         if (_rb != null) _rb.linearVelocity = Vector2.zero;
@@ -340,7 +350,11 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
         _failReason = "";
 
         Time.timeScale = 1f;
-        if (_pc != null) _pc.enabled = true;
+        if (_pc != null)
+        {
+            _pc.enabled = true;
+            _pc.SetRendererVisible(true); // 失敗死亡曾隱藏主角圖片,重來時確保恢復顯示
+        }
         if (_player != null && spawnPoint != null)
         {
             _player.transform.position = spawnPoint.position;
