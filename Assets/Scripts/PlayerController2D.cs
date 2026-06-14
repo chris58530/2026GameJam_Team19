@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using DG.Tweening;
 
 /// <summary>
 /// 基礎 2D 平台角色控制:左右移動 + 跳躍。
@@ -77,8 +78,24 @@ public class PlayerController2D : MonoBehaviour
     [Tooltip("依移動方向左右翻轉角色圖片")]
     public bool flipSpriteByDirection = true;
 
+    [Header("回饋感 (Juice,純視覺,不影響碰撞/邏輯)")]
+    [Tooltip("是否啟用跳躍/落地的縮放彈性、塵土粒子與輕微螢幕震動")]
+    public bool enableJuice = true;
+
+    [Tooltip("起跳時的縱向拉伸 (x 變窄, y 變高)")]
+    public Vector2 jumpSquash = new Vector2(0.8f, 1.25f);
+
+    [Tooltip("落地時的壓扁 (x 變寬, y 變矮)")]
+    public Vector2 landSquash = new Vector2(1.28f, 0.72f);
+
+    [Tooltip("判定為「重摔落地」的最小下墜速度 (越大越難觸發強回饋)")]
+    public float hardLandSpeed = 12f;
+
     private Rigidbody2D _rb;
     private SpriteRenderer _spriteRenderer;
+    private Transform _visual;          // 承載 squash 的視覺子物件 (與 Collider 分離)
+    private Vector3 _visualBaseScale = Vector3.one;
+    private float _fallSpeed;           // 落地前的下墜速度 (取絕對值),用來決定回饋強度
     private int _currentStateHash;
     private bool _isDead;
     private InputAction _moveAction;
@@ -116,6 +133,14 @@ public class PlayerController2D : MonoBehaviour
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
         _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+
+        // squash/stretch 作用在 SpriteRenderer 所在的視覺子物件 (Player/2D),
+        // 與根物件上的 Collider 分離,縮放它不會影響碰撞。
+        if (_spriteRenderer != null && _spriteRenderer.transform != transform)
+        {
+            _visual = _spriteRenderer.transform;
+            _visualBaseScale = _visual.localScale;
+        }
 
         // 零摩擦力材質:避免貼牆時被摩擦力「黏」在牆上而緩慢下滑。
         // Box2D 摩擦力為 sqrt(a*b),玩家這邊設 0,對任何牆面組合後都會是 0。
@@ -160,6 +185,12 @@ public class PlayerController2D : MonoBehaviour
         _coyoteTimer = 0f;
         // 重生 / 恢復控制:解除死亡鎖定,並從 idle 動畫開始
         _isDead = false;
+        // 視覺縮放歸位 (避免重生時卡在 squash 中途)
+        if (_visual != null)
+        {
+            _visual.DOKill();
+            _visual.localScale = _visualBaseScale;
+        }
         PlayState(idleState);
     }
 
@@ -167,6 +198,12 @@ public class PlayerController2D : MonoBehaviour
     {
         _moveAction.Disable();
         _jumpAction.Disable();
+        // 停用 (死亡 / 選卡) 時收掉縮放動畫並歸位,避免殘留
+        if (_visual != null)
+        {
+            _visual.DOKill();
+            _visual.localScale = _visualBaseScale;
+        }
     }
 
     private void OnDestroy()
@@ -195,6 +232,9 @@ public class PlayerController2D : MonoBehaviour
     {
         float dt = Time.fixedDeltaTime;
 
+        // 記錄進入這個物理幀時的速度:落地瞬間即為下墜速度,用來決定落地回饋強度
+        float incomingVelY = _rb.linearVelocity.y;
+
         // 地面偵測 (記錄踩到的 collider)
         Vector2 checkPos = (Vector2)transform.position + groundCheckOffset;
         _groundCollider = Physics2D.OverlapCircle(checkPos, groundCheckRadius, groundLayer);
@@ -206,6 +246,21 @@ public class PlayerController2D : MonoBehaviour
         {
             if (SoundManager.Instance != null)
                 SoundManager.Instance.PlaySFX("Land");
+
+            // 落地回饋:壓扁 + 塵土 + 依下墜速度的螢幕震動 (純視覺,不影響碰撞)
+            if (enableJuice)
+            {
+                _fallSpeed = Mathf.Max(0f, -incomingVelY);
+                float power = Mathf.Clamp01(_fallSpeed / Mathf.Max(0.01f, hardLandSpeed));
+
+                JuiceFX.Squash(_visual, _visualBaseScale, landSquash.x, landSquash.y, 0.22f);
+                JuiceFX.Dust((Vector2)transform.position + groundCheckOffset,
+                    count: 6 + Mathf.RoundToInt(power * 10f),
+                    strength: 0.8f + power * 0.7f);
+
+                if (power > 0.15f)
+                    JuiceFX.Shake(0.08f + power * 0.16f, 0.12f + power * 0.10f);
+            }
         }
 
         // Coyote time:在地面時補滿,離地後逐漸遞減
@@ -245,13 +300,27 @@ public class PlayerController2D : MonoBehaviour
 
             // 彈跳屍體:踩在帶有 CorpseSkill_Bounce 的平台上,跳躍力倍增
             float force = jumpForce;
+            bool bounced = false;
             if (_groundCollider != null)
             {
                 var bounce = _groundCollider.GetComponent<CorpseSkill_Bounce>();
-                if (bounce != null) force *= bounce.jumpMultiplier;
+                if (bounce != null) { force *= bounce.jumpMultiplier; bounced = true; }
             }
 
             velocity.y = force;
+
+            // 起跳回饋:縱向拉伸 + 腳底塵土 + 輕微震動 (彈跳屍體給更強的回饋)
+            if (enableJuice)
+            {
+                float stretchBoost = bounced ? 1.15f : 1f;
+                JuiceFX.Squash(_visual, _visualBaseScale,
+                    jumpSquash.x, jumpSquash.y * stretchBoost, 0.2f);
+                JuiceFX.Dust((Vector2)transform.position + groundCheckOffset,
+                    count: bounced ? 12 : 7,
+                    strength: bounced ? 1.3f : 0.9f);
+                if (bounced)
+                    JuiceFX.Shake(0.18f, 0.14f);
+            }
         }
 
         _rb.linearVelocity = velocity;
