@@ -24,6 +24,11 @@ public class CameraFollow2D : MonoBehaviour
     [Min(0f)]
     public float followSharpness = 4f;
 
+    [Tooltip("Y 軸獨立跟隨速度 (1/秒)。設較小的值可讓垂直方向跟得慢一點 (例如跳躍時不會馬上拉上去)。" +
+             "設 0 表示沿用 followSharpness。")]
+    [Min(0f)]
+    public float followSharpnessY = 1.5f;
+
     [Tooltip("距離放大指數。1 = 線性(純指數平滑);> 1 = 距離越遠越爆發(例如 1.5、2)。")]
     [Min(1f)]
     public float distancePower = 1.5f;
@@ -81,13 +86,18 @@ public class CameraFollow2D : MonoBehaviour
         // 「離越遠跟越快」:位移量做指數放大,再以 followSharpness 做指數平滑
         // 公式:step = delta * (1 - exp(-followSharpness * dt)) * distance^(distancePower - 1)
         // 等價於速度 v = k * |delta|^distancePower 的時間離散化,且天生 frame-rate independent。
+        // X 與 Y 分開計算,讓 Y 軸可以跟得比 X 慢 (跳躍時不會立刻把畫面拉上去)。
         float dt = Time.deltaTime;
         float distance = delta.magnitude;
         if (distance > 0.0001f)
         {
             float boost = (distancePower > 1f) ? Mathf.Pow(distance, distancePower - 1f) : 1f;
-            float t = 1f - Mathf.Exp(-followSharpness * boost * dt);
-            Vector3 step = delta * t;
+            float sharpY = (followSharpnessY > 0f) ? followSharpnessY : followSharpness;
+
+            float tx = 1f - Mathf.Exp(-followSharpness * boost * dt);
+            float ty = 1f - Mathf.Exp(-sharpY * boost * dt);
+
+            Vector3 step = new Vector3(delta.x * tx, delta.y * ty, delta.z * tx);
 
             // 速度上限 (可選)
             if (maxFollowSpeed > 0f)

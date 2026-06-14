@@ -11,7 +11,7 @@ AnimatorStateMachine:
   m_ChildStates:
   - serializedVersion: 1
     m_State: {fileID: 3552595932784533489}
-    m_Position: {x: 400, y: 280, z: 0}
+    m_Position: {x: 400, y: 330, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -3307497885437859407}
     m_Position: {x: 400, y: 20, z: 0}
@@ -21,6 +21,9 @@ AnimatorStateMachine:
   - serializedVersion: 1
     m_State: {fileID: -820330019715303675}
     m_Position: {x: 390, y: 210, z: 0}
+  - serializedVersion: 1
+    m_State: {fileID: 3148928696846933833}
+    m_Position: {x: 420, y: 280, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions: []
   m_EntryTransitions: []
@@ -127,6 +130,32 @@ AnimatorState:
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
   m_Motion: {fileID: 7400000, guid: d49ee25bb45679b4d8950db2703d6b72, type: 2}
+  m_Tag: 
+  m_SpeedParameter: 
+  m_MirrorParameter: 
+  m_CycleOffsetParameter: 
+  m_TimeParameter: 
+--- !u!1102 &3148928696846933833
+AnimatorState:
+  serializedVersion: 6
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: drink
+  m_Speed: 1
+  m_CycleOffset: 0
+  m_Transitions: []
+  m_StateMachineBehaviours: []
+  m_Position: {x: 50, y: 50, z: 0}
+  m_IKOnFeet: 0
+  m_WriteDefaultValues: 1
+  m_Mirror: 0
+  m_SpeedParameterActive: 0
+  m_MirrorParameterActive: 0
+  m_CycleOffsetParameterActive: 0
+  m_TimeParameterActive: 0
+  m_Motion: {fileID: 7400000, guid: 9c69f9196b8e3274eb604836c33f5380, type: 2}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 
