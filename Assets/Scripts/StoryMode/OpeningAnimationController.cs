@@ -1,92 +1,109 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.Video;
 
 /// <summary>
-/// 開場動畫控制器。掛在 OpeningAnimation 場景中的動畫物件上。
+/// 開場動畫：場景載入後播放影片，播完跳到下一關。
 /// 
-/// 功能：
-///   - 播放開場動畫（可以是 Animator、Timeline、或簡單的等待）
-///   - 動畫結束後呼叫 StoryFlowManager.Instance.StartGameLoop() 進入第一關
-/// 
-/// 設定方式（三種方式擇一）：
-/// 
-///   方式 A：使用 Unity Animation Event（推薦）
-///     1. 在 Animator Controller 的動畫 Clip 最後一帧加入 Animation Event
-///     2. 選擇函式：OnOpeningAnimationFinished
-///     3. 播放完畢自動呼叫
-/// 
-///   方式 B：使用 Animator StateMachineBehaviour
-///     1. 在動畫狀態結束時 SendMessage("OnOpeningAnimationFinished")
-/// 
-///   方式 C：使用自動計時（Inspector 設定）
-///     1. 勾選 useAutoTimer = true
-///     2. 設定 autoTimerDuration（秒）
-///     3. 不需要 Animation Event，時間到自動切換
-/// 
-/// 如果沒有動畫，可以用方式 C 作為 placeholder，
-/// 未來有動畫後再改成方式 A。
+/// 設定：
+///   1. 建立空物件掛此腳本
+///   2. Inspector 拖入 mp4
+///   3. 完成
 /// </summary>
 public class OpeningAnimationController : MonoBehaviour
 {
-    [Header("自動計時模式（無動畫時使用）")]
-    [Tooltip("是否使用自動計時代替 Animation Event")]
-    [SerializeField] private bool useAutoTimer = true;
+    [Header("影片")]
+    [SerializeField] private VideoClip videoClip;
 
-    [Tooltip("自動計時秒數（useAutoTimer 為 true 時生效）")]
-    [SerializeField] private float autoTimerDuration = 3f;
-
-    [Header("可選：跳過動畫按鈕")]
-    [Tooltip("是否允許按任意鍵跳過開場動畫")]
+    [Header("跳過設定")]
     [SerializeField] private bool allowSkip = true;
+    [SerializeField] private float skipMinWait = 2f;
 
-    [Tooltip("跳過前的最短等待時間（防止誤觸）")]
-    [SerializeField] private float skipMinWait = 0.5f;
+    private VideoPlayer vp;
+    private RenderTexture rt;
+    private bool finished = false;
+    private float elapsed = 0f;
 
-    private float elapsedTime = 0f;
-    private bool hasFinished = false;
+    private IEnumerator Start()
+    {
+        if (videoClip == null)
+        {
+            yield return new WaitForSeconds(3f);
+            GoNext();
+            yield break;
+        }
+
+        // 等一帧，確保場景完全載入
+        yield return null;
+
+        // 建立 RenderTexture
+        rt = new RenderTexture(1920, 1080, 0);
+        rt.Create();
+
+        // 建立 VideoPlayer
+        vp = gameObject.AddComponent<VideoPlayer>();
+        vp.source = VideoSource.VideoClip;
+        vp.clip = videoClip;
+        vp.playOnAwake = false;
+        vp.isLooping = false;
+        vp.skipOnDrop = true;
+        vp.audioOutputMode = VideoAudioOutputMode.Direct;
+        vp.renderMode = VideoRenderMode.RenderTexture;
+        vp.targetTexture = rt;
+
+        // 建立全螢幕 Canvas + RawImage
+        var canvasObj = new GameObject("_VideoCanvas");
+        var canvas = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 999;
+        var scaler = canvasObj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        var imgObj = new GameObject("_VideoImage");
+        imgObj.transform.SetParent(canvasObj.transform, false);
+        var rect = imgObj.AddComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        var rawImage = imgObj.AddComponent<RawImage>();
+        rawImage.texture = rt;
+
+        // 先準備影片
+        vp.Prepare();
+
+        // 等待準備完成
+        while (!vp.isPrepared)
+            yield return null;
+
+        // 註冊播放完畢事件
+        vp.loopPointReached += _ => GoNext();
+
+        // 播放
+        vp.Play();
+    }
 
     private void Update()
     {
-        if (hasFinished) return;
+        if (finished) return;
+        elapsed += Time.deltaTime;
 
-        elapsedTime += Time.deltaTime;
-
-        // 自動計時模式
-        if (useAutoTimer && elapsedTime >= autoTimerDuration)
-        {
-            OnOpeningAnimationFinished();
-            return;
-        }
-
-        // 允許跳過
-        if (allowSkip && elapsedTime >= skipMinWait && Input.anyKeyDown)
-        {
-            OnOpeningAnimationFinished();
-            return;
-        }
+        if (allowSkip && elapsed >= skipMinWait && Input.anyKeyDown)
+            GoNext();
     }
 
-    /// <summary>
-    /// 開場動畫播放完畢後呼叫此方法。
-    /// 
-    /// 連接方式：
-    ///   - Animation Event：在動畫 Clip 最後一帧新增事件，選擇此函式
-    ///   - 或由 useAutoTimer 自動觸發
-    ///   - 或由其他腳本手動呼叫：GetComponent&lt;OpeningAnimationController&gt;().OnOpeningAnimationFinished()
-    /// </summary>
-    public void OnOpeningAnimationFinished()
+    private void GoNext()
     {
-        if (hasFinished) return;
-        hasFinished = true;
+        if (finished) return;
+        finished = true;
 
-        Debug.Log("[OpeningAnimationController] 開場動畫結束，進入遊戲關卡。");
+        if (vp != null) vp.Stop();
+        if (rt != null) { rt.Release(); Destroy(rt); }
 
         if (StoryFlowManager.Instance != null)
-        {
             StoryFlowManager.Instance.StartGameLoop();
-        }
-        else
-        {
-            Debug.LogError("[OpeningAnimationController] StoryFlowManager 不存在！無法開始遊戲。");
-        }
     }
 }

@@ -89,7 +89,6 @@ public static class StoryModeSceneSetup
         // StoryFlowManager（DontDestroyOnLoad）
         var flowMgr = new GameObject("StoryFlowManager");
         var sfm = flowMgr.AddComponent<StoryFlowManager>();
-        // 設定預設值 — levelScenes 會使用 Game0, Game1, Game2
         var serializedObj = new SerializedObject(sfm);
         serializedObj.FindProperty("titleMenuScene").stringValue = "TitleMenu";
         serializedObj.FindProperty("openingAnimationScene").stringValue = "OpeningAnimation";
@@ -103,28 +102,28 @@ public static class StoryModeSceneSetup
         serializedObj.FindProperty("endingScene").stringValue = "Ending";
         serializedObj.ApplyModifiedProperties();
 
+        // 背景影片播放器
+        var bgVideoObj = new GameObject("BackgroundVideoPlayer");
+        var bgVideoPlayer = bgVideoObj.AddComponent<UnityEngine.Video.VideoPlayer>();
+        bgVideoPlayer.playOnAwake = false;
+        bgVideoPlayer.isLooping = true;
+        bgVideoPlayer.renderMode = UnityEngine.Video.VideoRenderMode.CameraFarPlane;
+        // Target Camera 需要手動拖入 Main Camera
+
         // Canvas
         var canvasObj = CreateCanvas("TitleCanvas");
 
         // TitleMenuUI
-        canvasObj.AddComponent<TitleMenuUI>();
-
-        // Animator（讓你之後可以加標題動畫）
-        var animator = canvasObj.AddComponent<Animator>();
-        // 提示：建立 Animator Controller 後拖入此處
-
-        // TitleAnimationHolder（放標題動畫用的全螢幕面板）
-        var animHolder = CreateFullScreenPanel(canvasObj.transform, "TitleAnimationHolder");
-        animHolder.AddComponent<CanvasGroup>(); // 用於 fade 動畫
+        var titleUI = canvasObj.AddComponent<TitleMenuUI>();
 
         // Start 按鈕
         var startBtn = CreateButton(canvasObj.transform, "StartButton", "START", 
             new Vector2(0.5f, 0.3f), new Vector2(0.5f, 0.3f), new Vector2(300, 80));
 
-        // 連接按鈕到 TitleMenuUI
-        var titleMenuUI = canvasObj.GetComponent<TitleMenuUI>();
-        var serializedUI = new SerializedObject(titleMenuUI);
+        // 連接
+        var serializedUI = new SerializedObject(titleUI);
         serializedUI.FindProperty("startButton").objectReferenceValue = startBtn.GetComponent<Button>();
+        serializedUI.FindProperty("backgroundVideo").objectReferenceValue = bgVideoPlayer;
         serializedUI.ApplyModifiedProperties();
 
         // EventSystem
@@ -135,6 +134,7 @@ public static class StoryModeSceneSetup
         EnsureDirectoryExists(path);
         EditorSceneManager.SaveScene(scene, path);
         Debug.Log($"[StoryModeSetup] ✓ 已建立 TitleMenu 場景: {path}");
+        Debug.Log("[StoryModeSetup] → 記得在 BackgroundVideoPlayer 的 Inspector 中：拖入影片 Clip + 設定 Target Camera = Main Camera");
     }
 
     [MenuItem("Tools/Story Mode/2. Create OpeningAnimation Scene")]
@@ -142,30 +142,37 @@ public static class StoryModeSceneSetup
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
-        // OpeningAnimationPlayer（掛 Controller + Animator）
+        // OpeningAnimationPlayer（掛 Controller + VideoPlayer）
         var playerObj = new GameObject("OpeningAnimationPlayer");
         var controller = playerObj.AddComponent<OpeningAnimationController>();
-        var animator = playerObj.AddComponent<Animator>(); // Animator for animation clips
+        var videoPlayer = playerObj.GetComponent<UnityEngine.Video.VideoPlayer>();
+        // VideoPlayer 由 [RequireComponent] 自動加上
+        videoPlayer.playOnAwake = false;
+        videoPlayer.isLooping = false;
+        videoPlayer.renderMode = UnityEngine.Video.VideoRenderMode.CameraFarPlane;
+        // Target Camera 需手動設定 Main Camera
 
         // 設定預設值
         var serializedCtrl = new SerializedObject(controller);
-        serializedCtrl.FindProperty("useAutoTimer").boolValue = true;
-        serializedCtrl.FindProperty("autoTimerDuration").floatValue = 3f;
         serializedCtrl.FindProperty("allowSkip").boolValue = true;
-        serializedCtrl.FindProperty("skipMinWait").floatValue = 0.5f;
+        serializedCtrl.FindProperty("skipMinWait").floatValue = 1f;
+        serializedCtrl.FindProperty("fallbackDuration").floatValue = 3f;
         serializedCtrl.ApplyModifiedProperties();
 
-        // Canvas（用於顯示動畫內容如圖片序列、文字等）
-        var canvasObj = CreateCanvas("AnimationCanvas");
-        var canvasAnimator = canvasObj.AddComponent<Animator>(); // Canvas 自己也有 Animator，可做 UI 動畫
+        // Canvas（顯示影片用的 RawImage + 跳過提示）
+        var canvasObj = CreateCanvas("UICanvas");
 
-        // 全螢幕動畫面板（放動畫圖片/影片用）
-        var animPanel = CreateFullScreenPanel(canvasObj.transform, "AnimationPanel");
-        animPanel.AddComponent<CanvasGroup>(); // 用於 fade in/out
-        var panelImage = animPanel.AddComponent<Image>();
-        panelImage.color = new Color(0, 0, 0, 1); // 黑色底
+        // 全螢幕 RawImage（用來顯示影片）
+        var rawImageObj = CreateFullScreenPanel(canvasObj.transform, "VideoDisplay");
+        var rawImage = rawImageObj.AddComponent<RawImage>();
+        rawImage.color = Color.white;
 
-        // 提示文字
+        // 連接 RawImage 到 Controller
+        var serializedCtrl2 = new SerializedObject(controller);
+        serializedCtrl2.FindProperty("displayRawImage").objectReferenceValue = rawImage;
+        serializedCtrl2.ApplyModifiedProperties();
+
+        // 跳過提示文字
         var skipText = CreateTextObject(canvasObj.transform, "SkipHintText",
             "Press any key to skip...",
             new Vector2(0.5f, 0.05f), new Vector2(0.5f, 0.05f), new Vector2(400, 40));
@@ -178,6 +185,7 @@ public static class StoryModeSceneSetup
         EnsureDirectoryExists(path);
         EditorSceneManager.SaveScene(scene, path);
         Debug.Log($"[StoryModeSetup] ✓ 已建立 OpeningAnimation 場景: {path}");
+        Debug.Log("[StoryModeSetup] → 記得在 OpeningAnimationPlayer 的 Inspector 中：拖入影片 Clip + 設定 Target Camera = Main Camera");
     }
 
     [MenuItem("Tools/Story Mode/3. Create Ending Scene")]
@@ -185,46 +193,38 @@ public static class StoryModeSceneSetup
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
+        // Victory 影片播放器
+        var victoryVideoObj = new GameObject("VictoryVideoPlayer");
+        var victoryVP = victoryVideoObj.AddComponent<UnityEngine.Video.VideoPlayer>();
+        victoryVP.playOnAwake = false;
+        victoryVP.isLooping = false;
+        victoryVP.renderMode = UnityEngine.Video.VideoRenderMode.CameraFarPlane;
+        victoryVideoObj.SetActive(false);
+
+        // Fail 影片播放器
+        var failVideoObj = new GameObject("FailVideoPlayer");
+        var failVP = failVideoObj.AddComponent<UnityEngine.Video.VideoPlayer>();
+        failVP.playOnAwake = false;
+        failVP.isLooping = false;
+        failVP.renderMode = UnityEngine.Video.VideoRenderMode.CameraFarPlane;
+        failVideoObj.SetActive(false);
+
         // Canvas
         var canvasObj = CreateCanvas("EndingCanvas");
 
         // EndingUI
         var endingUI = canvasObj.AddComponent<EndingUI>();
 
-        // Victory 動畫物件
-        var victoryObj = CreateFullScreenPanel(canvasObj.transform, "VictoryAnimObject");
-        victoryObj.AddComponent<Animator>(); // Animator for victory animation
-        victoryObj.AddComponent<CanvasGroup>();
-        var victoryImage = victoryObj.AddComponent<Image>();
-        victoryImage.color = new Color(0.1f, 0.4f, 0.1f, 1f); // 綠色底
-        victoryObj.SetActive(false);
-
-        // Victory 文字
-        var victoryText = CreateTextObject(victoryObj.transform, "VictoryText", "VICTORY!",
-            new Vector2(0.5f, 0.6f), new Vector2(0.5f, 0.6f), new Vector2(600, 120));
-
-        // Fail 動畫物件
-        var failObj = CreateFullScreenPanel(canvasObj.transform, "FailAnimObject");
-        failObj.AddComponent<Animator>(); // Animator for fail animation
-        failObj.AddComponent<CanvasGroup>();
-        var failImage = failObj.AddComponent<Image>();
-        failImage.color = new Color(0.4f, 0.1f, 0.1f, 1f); // 紅色底
-        failObj.SetActive(false);
-
-        // Fail 文字
-        var failText = CreateTextObject(failObj.transform, "FailText", "GAME OVER",
-            new Vector2(0.5f, 0.6f), new Vector2(0.5f, 0.6f), new Vector2(600, 120));
-
         // Buttons Panel
         var buttonsPanel = new GameObject("ButtonsPanel");
         buttonsPanel.transform.SetParent(canvasObj.transform, false);
+        buttonsPanel.layer = LayerMask.NameToLayer("UI");
         var buttonsPanelRect = buttonsPanel.AddComponent<RectTransform>();
         buttonsPanelRect.anchorMin = new Vector2(0.5f, 0.1f);
         buttonsPanelRect.anchorMax = new Vector2(0.5f, 0.4f);
         buttonsPanelRect.anchoredPosition = Vector2.zero;
         buttonsPanelRect.sizeDelta = new Vector2(400, 0);
 
-        // Vertical Layout
         var vlg = buttonsPanel.AddComponent<VerticalLayoutGroup>();
         vlg.spacing = 15;
         vlg.childAlignment = TextAnchor.MiddleCenter;
@@ -232,8 +232,7 @@ public static class StoryModeSceneSetup
         vlg.childControlWidth = false;
         vlg.childForceExpandHeight = false;
         vlg.childForceExpandWidth = false;
-
-        buttonsPanel.SetActive(false); // 預設隱藏，動畫後顯示
+        buttonsPanel.SetActive(false);
 
         // 按鈕
         var retryBtn = CreateButton(buttonsPanel.transform, "RetryButton", "RETRY", 
@@ -243,18 +242,15 @@ public static class StoryModeSceneSetup
         var quitBtn = CreateButton(buttonsPanel.transform, "QuitButton", "QUIT",
             Vector2.zero, Vector2.zero, new Vector2(280, 60));
 
-        // 連接 EndingUI references
+        // 連接 EndingUI
         var serializedEndingUI = new SerializedObject(endingUI);
-        serializedEndingUI.FindProperty("victoryAnimObject").objectReferenceValue = victoryObj;
-        serializedEndingUI.FindProperty("failAnimObject").objectReferenceValue = failObj;
+        serializedEndingUI.FindProperty("victoryVideoPlayer").objectReferenceValue = victoryVP;
+        serializedEndingUI.FindProperty("failVideoPlayer").objectReferenceValue = failVP;
         serializedEndingUI.FindProperty("buttonsPanel").objectReferenceValue = buttonsPanel;
         serializedEndingUI.FindProperty("retryButton").objectReferenceValue = retryBtn.GetComponent<Button>();
         serializedEndingUI.FindProperty("backToTitleButton").objectReferenceValue = backBtn.GetComponent<Button>();
         serializedEndingUI.FindProperty("quitButton").objectReferenceValue = quitBtn.GetComponent<Button>();
         serializedEndingUI.FindProperty("autoShowButtonsDelay").floatValue = 3f;
-        serializedEndingUI.FindProperty("useAutoShowButtons").boolValue = true;
-        serializedEndingUI.FindProperty("victoryMessage").stringValue = "Victory!";
-        serializedEndingUI.FindProperty("failMessage").stringValue = "Game Over";
         serializedEndingUI.ApplyModifiedProperties();
 
         // EventSystem
@@ -265,6 +261,7 @@ public static class StoryModeSceneSetup
         EnsureDirectoryExists(path);
         EditorSceneManager.SaveScene(scene, path);
         Debug.Log($"[StoryModeSetup] ✓ 已建立 Ending 場景: {path}");
+        Debug.Log("[StoryModeSetup] → 記得在 VictoryVideoPlayer / FailVideoPlayer 的 Inspector 中：拖入影片 Clip + 設定 Target Camera = Main Camera");
     }
 
     [MenuItem("Tools/Story Mode/4. Add LevelManager to Game0-1-2")]

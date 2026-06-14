@@ -1,67 +1,82 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Video;
 
 /// <summary>
-/// 標題選單 UI 控制器。掛在 TitleMenu 場景的 Canvas 上。
+/// 標題選單：背景影片 + Start 按鈕。
 /// 
-/// 設定方式：
-///   1. 在 TitleMenu 場景中建立 Canvas
-///   2. 建立 "Start" 按鈕
-///   3. 掛上此腳本
-///   4. 在 Inspector 中將 Start 按鈕拖入 startButton 欄位
-///      或直接在按鈕的 OnClick() 事件中連接 TitleMenuUI.OnStartButtonClicked()
-/// 
-/// 按鈕連接（Inspector 設定）：
-///   - Start 按鈕 → OnStartButtonClicked()
-///   - Quit 按鈕  → OnQuitButtonClicked()（可選）
+/// 設定：
+///   1. 建立 Canvas + Start 按鈕
+///   2. 掛此腳本，拖入按鈕和影片（影片可選）
+///   3. 不需要建 RawImage，腳本自動處理
 /// </summary>
 public class TitleMenuUI : MonoBehaviour
 {
-    [Header("按鈕參考（可選，也可用 Inspector 的 OnClick 連接）")]
-    [Tooltip("開始遊戲按鈕")]
+    [Header("按鈕")]
     [SerializeField] private Button startButton;
-
-    [Tooltip("退出遊戲按鈕（可選）")]
     [SerializeField] private Button quitButton;
+
+    [Header("背景影片（可選）")]
+    [Tooltip("標題背景影片，循環播放")]
+    [SerializeField] private VideoClip backgroundClip;
+
+    private VideoPlayer videoPlayer;
+    private RenderTexture rt;
 
     private void Start()
     {
-        // 如果有在 Inspector 拖入按鈕，自動連接事件
-        if (startButton != null)
-            startButton.onClick.AddListener(OnStartButtonClicked);
+        if (startButton != null) startButton.onClick.AddListener(OnStart);
+        if (quitButton != null) quitButton.onClick.AddListener(OnQuit);
 
-        if (quitButton != null)
-            quitButton.onClick.AddListener(OnQuitButtonClicked);
+        if (backgroundClip != null)
+            PlayBackground();
     }
 
-    /// <summary>
-    /// Start 按鈕點擊 → 前往 OpeningAnimation。
-    /// 在 Inspector 中連接：Button.OnClick() → TitleMenuUI.OnStartButtonClicked()
-    /// </summary>
-    public void OnStartButtonClicked()
+    private void PlayBackground()
     {
+        rt = new RenderTexture(1920, 1080, 0);
+        rt.Create();
+
+        videoPlayer = gameObject.AddComponent<VideoPlayer>();
+        videoPlayer.clip = backgroundClip;
+        videoPlayer.playOnAwake = false;
+        videoPlayer.isLooping = true;
+        videoPlayer.audioOutputMode = VideoAudioOutputMode.Direct;
+        videoPlayer.renderMode = VideoRenderMode.RenderTexture;
+        videoPlayer.targetTexture = rt;
+
+        // 自動建立顯示用的 RawImage（放在 Canvas 最底層）
+        var rawImageObj = new GameObject("BgVideoImage");
+        rawImageObj.transform.SetParent(transform, false);
+        rawImageObj.transform.SetAsFirstSibling(); // 最底層，按鈕在上面
+
+        var rectTransform = rawImageObj.AddComponent<RectTransform>();
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        var rawImage = rawImageObj.AddComponent<RawImage>();
+        rawImage.texture = rt;
+
+        videoPlayer.Play();
+    }
+
+    public void OnStart()
+    {
+        if (videoPlayer != null) videoPlayer.Stop();
+        if (rt != null) { rt.Release(); Destroy(rt); }
+
         if (StoryFlowManager.Instance != null)
-        {
             StoryFlowManager.Instance.StartOpeningAnimation();
-        }
-        else
-        {
-            Debug.LogError("[TitleMenuUI] StoryFlowManager 不存在！請確認場景中有 StoryFlowManager 物件。");
-        }
     }
 
-    /// <summary>
-    /// Quit 按鈕點擊 → 退出遊戲。
-    /// </summary>
-    public void OnQuitButtonClicked()
+    public void OnQuit()
     {
         if (StoryFlowManager.Instance != null)
-        {
             StoryFlowManager.Instance.QuitGame();
-        }
         else
         {
-            Debug.Log("[TitleMenuUI] 退出遊戲");
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else
