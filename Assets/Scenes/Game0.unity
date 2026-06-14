@@ -717,16 +717,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56d5bee5554b3425d9480aba6972bf93, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CorpseSkillSystem
+  selectionMode: 1
   deck:
-  - type: 0
+  - type: 1
     count: 1
-  - type: 0
+  - type: 2
     count: 1
-  - type: 0
+  - type: 3
     count: 1
   - type: 0
     count: 1
   displayCount: 3
+  slotAllowManualStop: 1
+  slotFastInterval: 0.1
+  slotMinFastTime: 0.3
+  slotMaxFastTime: 0.5
+  slotDecelTicks: 4
+  slotMaxInterval: 0.22
+  slotResultHold: 0.2
   speedMultiplier: {x: 2, y: 2}
   speedDecayPerSecond: 2
   moverDistance: 3
