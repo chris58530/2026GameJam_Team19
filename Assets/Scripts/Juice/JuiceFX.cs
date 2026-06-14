@@ -216,7 +216,7 @@ public static class JuiceFX
         vol.space = ParticleSystemSimulationSpace.Local;
         vol.x = new ParticleSystem.MinMaxCurve(-0.6f, 0.6f);
         vol.y = new ParticleSystem.MinMaxCurve(riseSpeed * 0.7f, riseSpeed);
-        vol.z = 0f;
+        vol.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
         // 縮小 + 淡出
         var sol = ps.sizeOverLifetime;
