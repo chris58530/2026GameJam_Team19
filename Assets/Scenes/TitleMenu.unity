@@ -711,7 +711,7 @@ MonoBehaviour:
   - Game1
   - Game2
   - Game3
-  endingScene: Ending
+  endingScene: TitleMenu
 --- !u!4 &1334741324
 Transform:
   m_ObjectHideFlags: 0
