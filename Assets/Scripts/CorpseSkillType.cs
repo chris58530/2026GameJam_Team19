@@ -51,6 +51,21 @@ public class CorpseSkillCard
 }
 
 /// <summary>
+/// 一個技能在「抽卡字卡」上的視覺設定。
+/// type = 技能種類; bottleSprite = 對應酒瓶圖 (拖拉設定,留空則只顯示純色底板)。
+/// 顏色沿用 CorpseSkillSystem 上的 colorXxx 欄位 (ColorFor),不在此重複設定。
+/// </summary>
+[System.Serializable]
+public class SkillCardVisual
+{
+    [Tooltip("技能種類")]
+    public CorpseSkillType type = CorpseSkillType.Normal;
+
+    [Tooltip("這個技能在字卡上顯示的酒瓶圖 (留空則只顯示純色底板)")]
+    public Sprite bottleSprite;
+}
+
+/// <summary>
 /// 技能種類的中文顯示名稱工具。
 /// </summary>
 public static class CorpseSkillNames

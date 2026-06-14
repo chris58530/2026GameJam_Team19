@@ -78,6 +78,18 @@ public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
             playerAnimator = _player.GetComponentInChildren<Animator>();
     }
 
+    private CorpseSkillSystem _skillSystem;
+
+    /// <summary>取得抽到技能對應的顏色 (沿用 CorpseSkillSystem 的配色)。</summary>
+    private Color ResolveSkillColor(CorpseSkillType result)
+    {
+        if (_skillSystem == null)
+            _skillSystem = GetComponent<CorpseSkillSystem>();
+        if (_skillSystem == null)
+            _skillSystem = FindAnyObjectByType<CorpseSkillSystem>();
+        return _skillSystem != null ? _skillSystem.ColorFor(result) : Color.white;
+    }
+
     public IEnumerator PlayIntro()
     {
         if (cam == null) yield break;
@@ -123,6 +135,20 @@ public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
             _player.DOPunchScale(new Vector3(0.18f, 0.18f, 0f), drinkDuration, 4, 0.6f).SetUpdate(true);
             yield return new WaitForSecondsRealtime(drinkDuration);
         }
+
+        // 喝完那一刻:在玩家腳底升起「抽到的技能顏色」光氣 (升級感的上升風),
+        // 讓喝酒演出與抽到的技能連動。timeScale=0 故用未縮放時間。
+        if (_player != null)
+        {
+            Color skillColor = ResolveSkillColor(result);
+            JuiceFX.RisingAura(_player.position + Vector3.down * 0.5f, skillColor,
+                width: 0.9f, riseSpeed: 4.5f, duration: 0.7f, particleLifetime: 0.95f,
+                size: 0.28f, rate: 60, sortingOrder: 50, unscaled: true);
+            JuiceFX.Shake(0.16f, 0.25f);
+        }
+
+        // 喝完回到 idle (zoom out 期間維持 idle,恢復遊戲後再交回 PlayerController2D)
+        PlayState(idleState);
 
         // zoom out 回原本
         if (cam != null)

@@ -24,7 +24,7 @@ EditorBuildSettings:
     path: Assets/Scenes/OpeningAnimation.unity
     guid: e3310d08d57484043abda533f6d29735
   - enabled: 1
-    path: Assets/Scenes/Game0.unity
+    path: Assets/Scenes/Game3.unity
     guid: 6d058a2de65774a9893bf214429274d5
   - enabled: 1
     path: Assets/Scenes/Game1.unity

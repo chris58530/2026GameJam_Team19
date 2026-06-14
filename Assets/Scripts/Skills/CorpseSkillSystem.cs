@@ -104,15 +104,19 @@ public class CorpseSkillSystem : MonoBehaviour
     public int groundLayer = -1;
 
     [Header("屍體顏色 (依技能區分,會保留原本透明度)")]
-    public Color colorNormal = new Color(0.8f, 0.35f, 0.35f);
-    public Color colorSpeed = new Color(0.35f, 0.85f, 0.4f);
-    public Color colorBounce = new Color(1f, 0.55f, 0.2f);
+    public Color colorNormal = new Color(0.30f, 0.80f, 0.35f);        // 普通 = 綠
+    public Color colorSpeed = new Color(0.95f, 0.85f, 0.20f);         // 跑得快 = 黃
+    public Color colorBounce = new Color(0.30f, 0.55f, 0.95f);        // 跳得高 = 藍
     public Color colorHorizontal = new Color(0.4f, 0.6f, 0.95f);
     public Color colorVertical = new Color(0.95f, 0.75f, 0.3f);
     public Color colorTeleport = new Color(0.75f, 0.4f, 0.9f);
-    public Color colorRandomLaunch = new Color(0.95f, 0.85f, 0.2f);
-    public Color colorBlinkOut = new Color(0.55f, 0.85f, 0.9f);
-    public Color colorLimitedUse = new Color(0.6f, 0.8f, 1f);
+    public Color colorRandomLaunch = new Color(0.90f, 0.30f, 0.30f);  // 隨機彈射 = 紅
+    public Color colorBlinkOut = new Color(0.75f, 0.78f, 0.80f);      // 消失再現 = 銀
+    public Color colorLimitedUse = new Color(0.65f, 0.40f, 0.85f);    // 限次使用 = 紫
+
+    [Header("字卡酒瓶圖 (依技能拖拉設定;留空則該技能只顯示純色底板)")]
+    [Tooltip("每筆 = 技能種類 + 對應酒瓶 Sprite。可用右鍵選單『填入所有技能種類』先建立全部欄位再拖圖。")]
+    public List<SkillCardVisual> cardVisuals = new List<SkillCardVisual>();
 
     /// <summary>是否正在選卡 (選卡期間管理器應暫停自身死亡/計時邏輯)。</summary>
     public bool IsBusy { get; private set; }
@@ -141,7 +145,8 @@ public class CorpseSkillSystem : MonoBehaviour
     // Slot uGUI
     private GameObject _uiRoot;
     private RectTransform _cardRect;
-    private Image _cardImage;
+    private Image _bottleImage;   // 上方酒瓶圖
+    private Image _plate;         // 下方文字底板 (純色,對應技能色)
     private Image _overlay;
     private Text _cardLabel;
     private Text _titleLabel;
@@ -310,13 +315,22 @@ public class CorpseSkillSystem : MonoBehaviour
         _cardRect.DOScale(0.85f, 0.07f).SetUpdate(true).SetEase(Ease.OutQuad);
         yield return new WaitForSecondsRealtime(0.07f);
 
-        // 閃白 → 回到技能色 (DOTween UI 模組)
-        if (_cardImage != null)
+        // 閃白 → 回到技能色 (DOTween UI 模組;作用在文字底板上)
+        if (_plate != null)
         {
             Color target = ColorFor(_slotResult); target.a = 1f;
-            _cardImage.color = Color.white;
-            _cardImage.DOColor(target, 0.35f).SetUpdate(true);
+            _plate.color = Color.white;
+            _plate.DOColor(target, 0.35f).SetUpdate(true);
         }
+
+        // 揭曉爆發:技能色放射粒子 + 白色亮點 + 全螢幕閃光 + 螢幕震動
+        // (純 UI/視覺,UIBurst/ScreenFlash 走未縮放時間,於 timeScale=0 抽卡暫停下也能播)
+        Color skillColor = ColorFor(_slotResult); skillColor.a = 1f;
+        JuiceFX.UIBurst(skillColor, count: 24, spread: 300f, size: 42f, duration: 0.9f);
+        JuiceFX.UIBurst(Color.white, count: 10, spread: 360f, size: 22f, duration: 0.7f);
+        Color flash = Color.Lerp(skillColor, Color.white, 0.6f); flash.a = 0.45f;
+        JuiceFX.ScreenFlash(flash, 0.28f);
+        JuiceFX.Shake(0.28f, 0.32f);
 
         // 衝擊放大 (overshoot 回彈)
         _cardRect.DOScale(1f, 0.35f).SetUpdate(true).SetEase(Ease.OutBack);
@@ -598,16 +612,34 @@ public class CorpseSkillSystem : MonoBehaviour
         tr.anchoredPosition = new Vector2(0, 230);
         tr.sizeDelta = new Vector2(800, 80);
 
-        // 卡片
-        _cardImage = CreateImage("Card", _uiRoot.transform, colorNormal);
-        _cardRect = _cardImage.rectTransform;
+        // 卡片容器 (酒瓶 + 文字底板都放這裡;脈動/衝擊回饋作用在容器上)
+        var cardGO = new GameObject("Card", typeof(RectTransform));
+        cardGO.transform.SetParent(_uiRoot.transform, false);
+        _cardRect = cardGO.GetComponent<RectTransform>();
         _cardRect.anchorMin = _cardRect.anchorMax = new Vector2(0.5f, 0.5f);
         _cardRect.pivot = new Vector2(0.5f, 0.5f);
         _cardRect.anchoredPosition = Vector2.zero;
-        _cardRect.sizeDelta = new Vector2(280, 360);
+        _cardRect.sizeDelta = new Vector2(320, 460);
 
-        // 卡片技能名
-        _cardLabel = CreateText("CardLabel", _cardRect, "", 46, Color.white);
+        // 上方:酒瓶圖 (透明背景,保持長寬比)
+        _bottleImage = CreateImage("Bottle", _cardRect, Color.white);
+        _bottleImage.preserveAspect = true;
+        var br = _bottleImage.rectTransform;
+        br.anchorMin = br.anchorMax = new Vector2(0.5f, 0.5f);
+        br.pivot = new Vector2(0.5f, 0.5f);
+        br.anchoredPosition = new Vector2(0, 70);
+        br.sizeDelta = new Vector2(300, 320);
+
+        // 下方:純色底板 (對應技能色,高度約等文字高)
+        _plate = CreateImage("Plate", _cardRect, colorNormal);
+        var pr = _plate.rectTransform;
+        pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
+        pr.pivot = new Vector2(0.5f, 0.5f);
+        pr.anchoredPosition = new Vector2(0, -180);
+        pr.sizeDelta = new Vector2(300, 78);
+
+        // 底板上的招式名稱文字
+        _cardLabel = CreateText("CardLabel", _plate.rectTransform, "", 44, Color.white);
         StretchFull(_cardLabel.rectTransform);
 
         _uiRoot.SetActive(false);
@@ -615,10 +647,43 @@ public class CorpseSkillSystem : MonoBehaviour
 
     private void ShowCardType(CorpseSkillType type)
     {
-        if (_cardImage == null) return;
         Color c = ColorFor(type); c.a = 1f;
-        _cardImage.color = c;
+        if (_plate != null) _plate.color = c;
+
+        if (_bottleImage != null)
+        {
+            var s = SpriteFor(type);
+            _bottleImage.sprite = s;
+            _bottleImage.enabled = (s != null);   // 沒設定圖就只顯示底板
+            _bottleImage.color = Color.white;
+        }
+
         if (_cardLabel != null) _cardLabel.text = CorpseSkillNames.ToDisplay(type);
+    }
+
+    /// <summary>取得某技能在字卡上對應的酒瓶圖 (Inspector 拖拉設定;沒設定回 null)。</summary>
+    public Sprite SpriteFor(CorpseSkillType skill)
+    {
+        if (cardVisuals != null)
+        {
+            foreach (var v in cardVisuals)
+                if (v != null && v.type == skill) return v.bottleSprite;
+        }
+        return null;
+    }
+
+    /// <summary>右鍵選單:把所有技能種類填入 cardVisuals (已存在的不覆蓋),方便逐一拖圖。</summary>
+    [ContextMenu("填入所有技能種類")]
+    private void PopulateCardVisuals()
+    {
+        if (cardVisuals == null) cardVisuals = new List<SkillCardVisual>();
+        foreach (CorpseSkillType t in System.Enum.GetValues(typeof(CorpseSkillType)))
+        {
+            bool exists = false;
+            foreach (var v in cardVisuals)
+                if (v != null && v.type == t) { exists = true; break; }
+            if (!exists) cardVisuals.Add(new SkillCardVisual { type = t });
+        }
     }
 
     private static Image CreateImage(string name, Transform parent, Color color)

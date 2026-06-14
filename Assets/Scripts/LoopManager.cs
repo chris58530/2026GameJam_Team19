@@ -119,7 +119,8 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
         if (buttons != null)
             foreach (var b in buttons)
                 if (b != null && b.IsPressed) PressedCount++;
-        DoorOpen = buttons != null && buttons.Length > 0 && PressedCount == buttons.Length;
+        // 沒有設定任何按鈕的關卡 → 門直接視為開啟 (自由出口);否則需所有按鈕被壓下。
+        DoorOpen = buttons == null || buttons.Length == 0 || PressedCount == buttons.Length;
 
         if (Won) return;
 

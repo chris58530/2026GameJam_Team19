@@ -164,6 +164,81 @@ public static class JuiceFX
         Burst(position, Color.white, count: 12, speed: 5f, size: 0.28f, lifetime: 0.4f, gravity: 0f);
     }
 
+    /// <summary>
+    /// 升騰光氣 (升級感)。粒子從 footPosition 的一條水平帶持續往上飄、左右輕擺、縮小淡出,
+    /// 像 RPG 升級時的上升風。2D 友善:全部落在 XY 平面,不會往深度散開。
+    /// 持續 duration 秒發射,unscaled=true 時於 timeScale=0 (喝酒暫停) 也能播,播完自動銷毀。
+    /// </summary>
+    public static void RisingAura(
+        Vector3 footPosition,
+        Color color,
+        float width = 0.9f,
+        float riseSpeed = 4.2f,
+        float duration = 0.7f,
+        float particleLifetime = 0.9f,
+        float size = 0.26f,
+        int rate = 55,
+        int sortingOrder = 50,
+        bool unscaled = false)
+    {
+        var go = new GameObject("FX_RisingAura");
+        go.transform.position = footPosition;
+
+        var ps = go.AddComponent<ParticleSystem>();
+        ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+
+        var main = ps.main;
+        main.loop = false;
+        main.playOnAwake = false;
+        main.duration = duration;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(particleLifetime * 0.7f, particleLifetime);
+        main.startSpeed = 0f; // 由 velocityOverLifetime 控制上升,避免徑向亂噴
+        main.startSize = new ParticleSystem.MinMaxCurve(size * 0.5f, size);
+        main.startColor = color;
+        main.gravityModifier = -0.04f; // 微負,持續上飄
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.useUnscaledTime = unscaled;
+        main.stopAction = ParticleSystemStopAction.Destroy;
+
+        var emission = ps.emission;
+        emission.enabled = true;
+        emission.rateOverTime = rate;
+
+        // 腳底一條扁平水平帶 (2D:只在 XY 平面分布)
+        var shape = ps.shape;
+        shape.enabled = true;
+        shape.shapeType = ParticleSystemShapeType.Box;
+        shape.scale = new Vector3(width, 0.1f, 0.01f);
+
+        // 上升 + 左右輕擺
+        var vol = ps.velocityOverLifetime;
+        vol.enabled = true;
+        vol.space = ParticleSystemSimulationSpace.Local;
+        vol.x = new ParticleSystem.MinMaxCurve(-0.6f, 0.6f);
+        vol.y = new ParticleSystem.MinMaxCurve(riseSpeed * 0.7f, riseSpeed);
+        vol.z = 0f;
+
+        // 縮小 + 淡出
+        var sol = ps.sizeOverLifetime;
+        sol.enabled = true;
+        sol.size = new ParticleSystem.MinMaxCurve(1f, SizeCurve());
+
+        var col = ps.colorOverLifetime;
+        col.enabled = true;
+        col.color = FadeGradient(color);
+
+        var renderer = go.GetComponent<ParticleSystemRenderer>();
+        renderer.material = AlphaMat();
+        renderer.sortingOrder = sortingOrder;
+
+        ps.Play();
+
+        DOVirtual.DelayedCall(duration + particleLifetime + 0.5f, () =>
+        {
+            if (go != null) Object.Destroy(go);
+        }, true);
+    }
+
     private static ParticleSystem.MinMaxGradient FadeGradient(Color c)
     {
         var grad = new Gradient();
@@ -254,5 +329,71 @@ public static class JuiceFX
             .SetUpdate(true)
             .SetEase(Ease.OutQuad)
             .OnComplete(() => Object.Destroy(go));
+    }
+
+    // ───────────────────────── UI 粒子爆發 ─────────────────────────
+
+    /// <summary>
+    /// 在 UI 上噴一圈放射狀粒子 (用 Image + DOTween,保證顯示在抽卡 UI 之上)。
+    /// 自建一個比抽卡 Canvas 更高層的 Overlay Canvas,粒子從畫面中心 (可加 offset)
+    /// 向外放射 + 縮小淡出,像「恭喜抽到!」的慶祝爆發。
+    /// 全程用未縮放時間,於抽卡暫停 (timeScale=0) 也能播,播完自動銷毀。
+    /// </summary>
+    public static void UIBurst(
+        Color color,
+        int count = 22,
+        float spread = 280f,
+        float size = 38f,
+        float duration = 0.85f,
+        Vector2 centerOffset = default)
+    {
+        var go = new GameObject("FX_UIBurst");
+
+        var canvas = go.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 6000; // 高於抽卡 UI(1000)與全螢幕閃光(5000)
+
+        var scaler = go.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        var rootRT = (RectTransform)go.transform;
+        var sprite = SoftSprite();
+
+        for (int i = 0; i < count; i++)
+        {
+            var pGo = new GameObject("p", typeof(RectTransform));
+            var rt = (RectTransform)pGo.transform;
+            rt.SetParent(rootRT, false);
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = centerOffset;
+
+            float ps = size * Random.Range(0.55f, 1.2f);
+            rt.sizeDelta = new Vector2(ps, ps);
+
+            var img = pGo.AddComponent<Image>();
+            img.sprite = sprite;
+            img.color = color;
+            img.raycastTarget = false;
+
+            // 放射方向:均勻分布 + 抖動,避免太規律
+            float ang = (i / (float)count) * Mathf.PI * 2f + Random.Range(-0.25f, 0.25f);
+            float dist = spread * Random.Range(0.6f, 1.15f);
+            Vector2 dir = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang));
+            Vector2 dest = centerOffset + dir * dist;
+            dest.y -= dist * 0.25f; // 尾段略微下垂,像煙火灑落
+
+            float dur = duration * Random.Range(0.7f, 1f);
+            rt.DOAnchorPos(dest, dur).SetUpdate(true).SetEase(Ease.OutCubic);
+            rt.DOScale(0.15f, dur).SetUpdate(true).SetEase(Ease.InQuad);
+            img.DOFade(0f, dur).SetUpdate(true).SetEase(Ease.InQuad);
+        }
+
+        // 用未縮放的延遲呼叫銷毀 (timeScale=0 下 Object.Destroy(go, t) 不會觸發)
+        DOVirtual.DelayedCall(duration + 0.4f, () =>
+        {
+            if (go != null) Object.Destroy(go);
+        }, true);
     }
 }
