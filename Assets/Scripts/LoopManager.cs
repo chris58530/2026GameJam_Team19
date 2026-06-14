@@ -184,6 +184,8 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
             if (_rb != null) _rb.linearVelocity = Vector2.zero;
             if (_pc != null) _pc.enabled = false;
 
+            Debug.Log($"[Victory] Level: {UnityEngine.SceneManagement.SceneManager.GetActiveScene().name} — Victory!");
+
             if (SoundManager.Instance != null)
                 SoundManager.Instance.PlaySFX("LevelClear");
         }
