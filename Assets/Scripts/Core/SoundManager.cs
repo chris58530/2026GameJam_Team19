@@ -31,6 +31,22 @@ public class SoundManager : MonoBehaviour
 {
     public static SoundManager Instance { get; private set; }
 
+    /// <summary>
+    /// 自動啟動：場景載入後若場景中沒有任何 SoundManager，
+    /// 則自動建立一個（DontDestroyOnLoad）。
+    /// 這讓程式合成音效不需手動擺放 SoundManager 即可運作；
+    /// 若某場景已手動放置並設定好 SoundManager，單例守衛會保留它、不建立重複。
+    /// </summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void AutoBootstrap()
+    {
+        if (Instance != null) return;
+        if (FindFirstObjectByType<SoundManager>() != null) return;
+
+        var go = new GameObject("SoundManager (Auto)");
+        go.AddComponent<SoundManager>();
+    }
+
     // ─── Inspector 設定 ───────────────────────────────────────
 
     [Header("BGM 設定")]
@@ -59,6 +75,10 @@ public class SoundManager : MonoBehaviour
     [Tooltip("所有 SFX 音效片段")]
     [SerializeField] private SoundClip[] sfxClips;
 
+    [Header("程式合成備援")]
+    [Tooltip("找不到已綁定的 AudioClip 時，是否以程式即時合成音效（不需音檔）")]
+    [SerializeField] private bool enableProceduralFallback = true;
+
     // ─── 內部狀態 ───────────────────────────────────────────
 
     private AudioSource bgmSource;
@@ -72,6 +92,9 @@ public class SoundManager : MonoBehaviour
     private string currentBgmName;
 
     private Dictionary<string, string> sceneBgmMap;
+
+    // 程式合成音效快取（避免每次播放都重新合成）
+    private Dictionary<string, AudioClip> generatedClips = new Dictionary<string, AudioClip>();
 
     // ─── Lifecycle ──────────────────────────────────────────
 
@@ -194,11 +217,15 @@ public class SoundManager : MonoBehaviour
         if (clipName == currentBgmName && bgmSource.isPlaying)
             return;
 
-        if (!bgmDict.TryGetValue(clipName, out AudioClip clip))
+        AudioClip clip = ResolveBGMClip(clipName);
+        if (clip == null)
         {
             Debug.LogWarning($"[SoundManager] 找不到 BGM: {clipName}");
             return;
         }
+
+        // 程式合成的 BGM 需要 loop
+        bgmSource.loop = true;
 
         if (bgmFadeCoroutine != null)
             StopCoroutine(bgmFadeCoroutine);
@@ -258,8 +285,12 @@ public class SoundManager : MonoBehaviour
 
         if (!sfxDict.TryGetValue(clipName, out AudioClip clip))
         {
-            Debug.LogWarning($"[SoundManager] 找不到 SFX: {clipName}");
-            return;
+            clip = ResolveGenerated(clipName);
+            if (clip == null)
+            {
+                Debug.LogWarning($"[SoundManager] 找不到 SFX: {clipName}");
+                return;
+            }
         }
 
         AudioSource source = sfxSources[currentSfxIndex];
@@ -283,8 +314,12 @@ public class SoundManager : MonoBehaviour
 
         if (!sfxDict.TryGetValue(clipName, out AudioClip clip))
         {
-            Debug.LogWarning($"[SoundManager] 找不到 SFX: {clipName}");
-            return;
+            clip = ResolveGenerated(clipName);
+            if (clip == null)
+            {
+                Debug.LogWarning($"[SoundManager] 找不到 SFX: {clipName}");
+                return;
+            }
         }
 
         // 找一個目前沒在播放的 channel
@@ -310,6 +345,34 @@ public class SoundManager : MonoBehaviour
     public float GetSFXVolume() => sfxVolume;
 
     // ─── 內部方法 ───────────────────────────────────────────
+
+    /// <summary>
+    /// 解析 BGM 名稱對應的 AudioClip。
+    /// 若 Inspector 未綁定，且啟用程式合成備援，則即時合成（並快取）。
+    /// </summary>
+    private AudioClip ResolveBGMClip(string clipName)
+    {
+        if (bgmDict.TryGetValue(clipName, out AudioClip clip))
+            return clip;
+        return ResolveGenerated(clipName);
+    }
+
+    /// <summary>
+    /// 解析 SFX 名稱對應的 AudioClip。
+    /// 若 Inspector 未綁定，且啟用程式合成備援，則即時合成（並快取）。
+    /// </summary>
+    private AudioClip ResolveGenerated(string clipName)
+    {
+        if (!enableProceduralFallback)
+            return null;
+
+        if (generatedClips.TryGetValue(clipName, out AudioClip cached))
+            return cached;
+
+        AudioClip generated = ProceduralAudio.Generate(clipName);
+        generatedClips[clipName] = generated;
+        return generated;
+    }
 
     private AudioSource GetAvailableSfxSource()
     {

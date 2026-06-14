@@ -196,6 +196,10 @@ public class CorpseSkillSystem : MonoBehaviour
         IsBusy = true;
         _selectionUIVisible = false;
         Time.timeScale = 0f;
+
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFX("DrawStart");
+
         StartCoroutine(SelectionFlow());
     }
 
@@ -297,6 +301,9 @@ public class CorpseSkillSystem : MonoBehaviour
     /// <summary>轉動時每格的小脈動。</summary>
     private void TickPulse()
     {
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFXOneShot("SlotTick", 0.7f);
+
         if (_cardRect == null) return;
         _cardRect.DOComplete();
         _cardRect.localScale = Vector3.one;
@@ -326,6 +333,8 @@ public class CorpseSkillSystem : MonoBehaviour
         // 揭曉爆發:技能色放射粒子 + 白色亮點 + 全螢幕閃光 + 螢幕震動
         // (純 UI/視覺,UIBurst/ScreenFlash 走未縮放時間,於 timeScale=0 抽卡暫停下也能播)
         Color skillColor = ColorFor(_slotResult); skillColor.a = 1f;
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFXOneShot("SlotReveal");
         JuiceFX.UIBurst(skillColor, count: 24, spread: 300f, size: 42f, duration: 0.9f);
         JuiceFX.UIBurst(Color.white, count: 10, spread: 360f, size: 22f, duration: 0.7f);
         Color flash = Color.Lerp(skillColor, Color.white, 0.6f); flash.a = 0.45f;
@@ -384,6 +393,8 @@ public class CorpseSkillSystem : MonoBehaviour
     private void ChooseClassic(int index)
     {
         if (index < 0 || index >= _hand.Count) return;
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFX("CardSelect");
         _classicResult = _hand[index];
         _classicResolved = true;
     }
