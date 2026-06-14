@@ -1,10 +1,10 @@
 /// <summary>
-/// 關卡失敗處理介面。
-/// 由關卡管理器 (LoopManager / DeadBodyManager 等) 實作。
-/// Hazard 等「非自身機制死亡」來源透過此介面通知失敗,不直接依賴特定管理器。
+/// Level-failure handling interface.
+/// Implemented by the level manager (LoopManager / DeadBodyManager, etc.).
+/// Sources of "death not caused by the player's own mechanics" (such as Hazard) notify failure through this interface instead of depending directly on a specific manager.
 /// </summary>
 public interface ILevelFailHandler
 {
-    /// <summary>宣告關卡失敗 (顯示失敗文字後整關重來)。</summary>
+    /// <summary>Declares the level failed (shows the failure text, then restarts the whole level).</summary>
     void FailLevel(string reason);
 }

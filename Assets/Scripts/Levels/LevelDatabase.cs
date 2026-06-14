@@ -2,24 +2,24 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 關卡資料庫 ScriptableObject。
-/// 存放所有可用的 LevelDefinition，供 LevelSelectorController 使用。
+/// Level database ScriptableObject.
+/// Stores all available LevelDefinitions for use by the LevelSelectorController.
 /// 
-/// 建立方式：
-///   Project 面板右鍵 → Create → GameJam → Level Database
+/// How to create:
+///   Right-click in the Project panel -> Create -> GameJam -> Level Database
 /// 
-/// 設定方式：
-///   - 將所有 LevelDefinition asset 拖入 levels 列表
+/// Setup:
+///   - Drag all LevelDefinition assets into the levels list
 /// </summary>
 [CreateAssetMenu(fileName = "LevelDatabase", menuName = "GameJam/Level Database")]
 public class LevelDatabase : ScriptableObject
 {
-    [Header("所有關卡定義")]
-    [Tooltip("將所有 LevelDefinition asset 拖入此列表")]
+    [Header("All Level Definitions")]
+    [Tooltip("Drag all LevelDefinition assets into this list")]
     public List<LevelDefinition> levels = new List<LevelDefinition>();
 
     /// <summary>
-    /// 取得所有關卡定義。
+    /// Gets all level definitions.
     /// </summary>
     public List<LevelDefinition> GetAllLevels()
     {
@@ -27,13 +27,13 @@ public class LevelDatabase : ScriptableObject
     }
 
     /// <summary>
-    /// 依 levelId 查找關卡定義。
+    /// Finds a level definition by levelId.
     /// </summary>
     public LevelDefinition GetLevelById(string levelId)
     {
         if (string.IsNullOrEmpty(levelId))
         {
-            Debug.LogWarning("[LevelDatabase] GetLevelById: levelId 為空！");
+            Debug.LogWarning("[LevelDatabase] GetLevelById: levelId is empty!");
             return null;
         }
 
@@ -43,12 +43,12 @@ public class LevelDatabase : ScriptableObject
                 return levels[i];
         }
 
-        Debug.LogWarning($"[LevelDatabase] 找不到 levelId: {levelId}");
+        Debug.LogWarning($"[LevelDatabase] Could not find levelId: {levelId}");
         return null;
     }
 
     /// <summary>
-    /// 取得已排序的關卡列表（依 sortOrder）。
+    /// Gets the sorted list of levels (by sortOrder).
     /// </summary>
     public List<LevelDefinition> GetSortedLevels()
     {

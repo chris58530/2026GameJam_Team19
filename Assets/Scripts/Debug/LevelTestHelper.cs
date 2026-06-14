@@ -2,23 +2,23 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 關卡測試輔助腳本 — 用鍵盤快捷鍵快速測試通關流程。
+/// Level testing helper script - use keyboard shortcuts to quickly test the clear flow.
 /// 
-/// 快捷鍵：
-///   P        = 直接過關 / 跳到下一關
+/// Shortcuts:
+///   P        = Clear the level directly / jump to the next level
 ///
-/// 使用方式：
-///   1. 在 Game0 (或任何關卡) 場景中建立空 GameObject
-///   2. 命名為 "LevelTestHelper"
-///   3. 掛上此腳本
-///   4. Play 模式中按 P 即可過關
+/// Usage:
+///   1. Create an empty GameObject in the Game0 (or any level) scene
+///   2. Name it "LevelTestHelper"
+///   3. Attach this script
+///   4. Press P in Play mode to clear the level
 ///
-/// 注意：此腳本僅供開發測試，正式版本請移除或停用。
+/// Note: this script is for development testing only; remove or disable it in the release build.
 /// </summary>
 public class LevelTestHelper : MonoBehaviour
 {
-    [Header("設定")]
-    [Tooltip("是否啟用此測試腳本 (關閉後快捷鍵無效)")]
+    [Header("Settings")]
+    [Tooltip("Whether to enable this test script (shortcuts are disabled when off)")]
     [SerializeField] private bool enableTestKeys = true;
 
     private LoopManager _loopManager;
@@ -37,35 +37,35 @@ public class LevelTestHelper : MonoBehaviour
         var kb = Keyboard.current;
         if (kb == null) return;
 
-        // P = 直接過關 / 跳到下一關
+        // P = Clear the level directly / jump to the next level
         if (kb.pKey.wasPressedThisFrame)
         {
             ForceVictory();
         }
     }
 
-    /// <summary>直接觸發勝利 / 過關。</summary>
+    /// <summary>Directly triggers victory / level clear.</summary>
     private void ForceVictory()
     {
-        // 優先嘗試 LoopManager (Game0 使用)
+        // Try LoopManager first (used by Game0)
         if (_loopManager != null)
         {
             _loopManager.TryExit();
 
-            // 如果門沒開,TryExit 不會觸發勝利,改用 LevelManager
+            // If the door isn't open, TryExit won't trigger victory; fall back to LevelManager
             if (!_loopManager.Won)
             {
-                Debug.Log("[TestHelper] LoopManager 門未開,直接呼叫 LevelManager.OnLevelCleared()");
+                Debug.Log("[TestHelper] LoopManager door not open, calling LevelManager.OnLevelCleared() directly");
                 TriggerLevelComplete();
             }
             return;
         }
 
-        // 其餘情況直接觸發關卡完成
+        // Otherwise trigger level completion directly
         TriggerLevelComplete();
     }
 
-    /// <summary>觸發關卡完成 (通用)。</summary>
+    /// <summary>Triggers level completion (generic).</summary>
     private void TriggerLevelComplete()
     {
         if (LevelManager.Instance != null)
@@ -78,7 +78,7 @@ public class LevelTestHelper : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[TestHelper] 找不到 LevelManager 或 StoryFlowManager！");
+            Debug.LogWarning("[TestHelper] Could not find LevelManager or StoryFlowManager!");
         }
     }
 }

@@ -1,51 +1,51 @@
 using UnityEngine;
 
 /// <summary>
-/// 關卡定義 ScriptableObject。
-/// 每個關卡一個 asset 檔案，描述關卡的基本資訊與 Prefab 參考。
+/// Level definition ScriptableObject.
+/// One asset file per level, describing the level's basic info and Prefab reference.
 /// 
-/// 建立方式：
-///   Project 面板右鍵 → Create → GameJam → Level Definition
+/// How to create:
+///   Right-click in the Project panel -> Create -> GameJam -> Level Definition
 /// 
-/// 設定方式：
-///   - levelId: 唯一 ID（如 "level_01"）
-///   - displayName: 顯示名稱（如 "第一關"）
-///   - levelPrefab: 拖入關卡 Prefab（如 Level_01.prefab）
-///   - previewImage: 可選的預覽圖
-///   - difficulty: 難度描述
-///   - description: 關卡說明
-///   - unlockedByDefault: 是否預設解鎖
-///   - sortOrder: 排序順序
+/// Setup:
+///   - levelId: unique ID (e.g. "level_01")
+///   - displayName: display name (e.g. "Level 1")
+///   - levelPrefab: drag in the level Prefab (e.g. Level_01.prefab)
+///   - previewImage: optional preview image
+///   - difficulty: difficulty description
+///   - description: level description
+///   - unlockedByDefault: whether it is unlocked by default
+///   - sortOrder: sort order
 /// </summary>
 [CreateAssetMenu(fileName = "NewLevelDefinition", menuName = "GameJam/Level Definition")]
 public class LevelDefinition : ScriptableObject
 {
-    [Header("基本資訊")]
-    [Tooltip("關卡唯一 ID，例如 level_01")]
+    [Header("Basic Info")]
+    [Tooltip("Unique level ID, e.g. level_01")]
     public string levelId = "";
 
-    [Tooltip("顯示名稱，用於 UI")]
+    [Tooltip("Display name, used in the UI")]
     public string displayName = "New Level";
 
-    [Header("關卡 Prefab")]
-    [Tooltip("關卡 Prefab，會在 GameScene 中實例化")]
+    [Header("Level Prefab")]
+    [Tooltip("Level Prefab, instantiated in the GameScene")]
     public GameObject levelPrefab;
 
-    [Header("UI 顯示")]
-    [Tooltip("關卡預覽圖（可選）")]
+    [Header("UI Display")]
+    [Tooltip("Level preview image (optional)")]
     public Sprite previewImage;
 
-    [Tooltip("難度描述")]
+    [Tooltip("Difficulty description")]
     public string difficulty = "Normal";
 
-    [Tooltip("關卡說明")]
+    [Tooltip("Level description")]
     [TextArea(2, 4)]
     public string description = "";
 
-    [Header("解鎖與排序")]
-    [Tooltip("是否預設解鎖")]
+    [Header("Unlock and Sorting")]
+    [Tooltip("Whether it is unlocked by default")]
     public bool unlockedByDefault = true;
 
-    [Tooltip("排序順序（數字越小越前面）")]
+    [Tooltip("Sort order (smaller numbers come first)")]
     public int sortOrder = 0;
 }

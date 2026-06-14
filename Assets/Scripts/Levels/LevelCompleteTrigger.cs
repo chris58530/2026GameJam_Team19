@@ -1,24 +1,24 @@
 using UnityEngine;
 
 /// <summary>
-/// 關卡完成觸發器範例。
-/// 當玩家到達目標（例如碰到這個 Collider）時，觸發關卡完成。
+/// Example level-complete trigger.
+/// When the player reaches the goal (for example, touches this Collider), the level is completed.
 /// 
-/// 使用方式：
-///   1. 在關卡 Prefab 中建立空 GameObject（例如 "Goal"）
-///   2. 加上 BoxCollider2D（Is Trigger = true）或 BoxCollider（Is Trigger = true）
-///   3. 掛上此腳本
-///   4. 設定 playerTag（預設為 "Player"）
+/// Usage:
+///   1. Create an empty GameObject in the level Prefab (e.g. "Goal")
+///   2. Add a BoxCollider2D (Is Trigger = true) or BoxCollider (Is Trigger = true)
+///   3. Attach this script
+///   4. Set playerTag (defaults to "Player")
 /// 
-/// 注意：此範例同時實作 ILevelInitializable，可接收 LevelRunContext。
+/// Note: this example also implements ILevelInitializable so it can receive a LevelRunContext.
 /// </summary>
 public class LevelCompleteTrigger : MonoBehaviour, ILevelInitializable
 {
-    [Header("設定")]
-    [Tooltip("玩家物件的 Tag")]
+    [Header("Settings")]
+    [Tooltip("The Tag of the player object")]
     [SerializeField] private string playerTag = "Player";
 
-    [Tooltip("完成後的行為")]
+    [Tooltip("Behavior after completion")]
     [SerializeField] private CompleteBehavior completeBehavior = CompleteBehavior.ReturnToLevelSelector;
 
     private LevelRunContext levelContext;
@@ -31,12 +31,12 @@ public class LevelCompleteTrigger : MonoBehaviour, ILevelInitializable
     }
 
     /// <summary>
-    /// 接收關卡執行時資料（由 GameSceneController 呼叫）。
+    /// Receives the level runtime data (called by GameSceneController).
     /// </summary>
     public void Initialize(LevelRunContext context)
     {
         levelContext = context;
-        Debug.Log($"[LevelCompleteTrigger] 已初始化。關卡: {context.selectedLevelName}, 難度: {context.difficulty}");
+        Debug.Log($"[LevelCompleteTrigger] Initialized. Level: {context.selectedLevelName}, Difficulty: {context.difficulty}");
     }
 
     // --- 2D Trigger ---
@@ -58,16 +58,16 @@ public class LevelCompleteTrigger : MonoBehaviour, ILevelInitializable
     }
 
     /// <summary>
-    /// 手動觸發關卡完成（可由其他腳本呼叫）。
+    /// Manually triggers level completion (can be called by other scripts).
     /// </summary>
     public void TriggerLevelComplete()
     {
         if (triggered) return;
         triggered = true;
 
-        Debug.Log($"[LevelCompleteTrigger] 關卡完成！{levelContext?.selectedLevelName ?? "Unknown"}");
+        Debug.Log($"[LevelCompleteTrigger] Level complete! {levelContext?.selectedLevelName ?? "Unknown"}");
 
-        // TODO: 這裡可以加入關卡完成動畫、音效、存檔等邏輯
+        // TODO: Add level-complete animation, sound effects, saving, and other logic here
 
         switch (completeBehavior)
         {

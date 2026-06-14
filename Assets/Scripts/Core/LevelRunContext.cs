@@ -2,10 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 關卡執行時上下文資料。
-/// 在 LevelSelectorScene 中建立，傳遞給 GameScene 中的關卡 Prefab。
+/// Level runtime context data.
+/// Created in LevelSelectorScene and passed to the level Prefab in GameScene.
 /// 
-/// 用法：
+/// Usage:
 ///   var context = new LevelRunContext();
 ///   context.selectedLevelId = "level_01";
 ///   context.difficulty = "normal";
@@ -14,7 +14,7 @@ using UnityEngine;
 [System.Serializable]
 public class LevelRunContext
 {
-    [Header("基本關卡資訊")]
+    [Header("Basic level info")]
     public string selectedLevelId = "";
     public string selectedLevelName = "";
     public string difficulty = "normal";
@@ -22,7 +22,7 @@ public class LevelRunContext
     public int replayIndex = 0;
     public int seed = 0;
 
-    // --- 自訂變數字典 ---
+    // --- Custom variable dictionaries ---
     private Dictionary<string, string> stringVars = new Dictionary<string, string>();
     private Dictionary<string, int> intVars = new Dictionary<string, int>();
     private Dictionary<string, float> floatVars = new Dictionary<string, float>();
@@ -73,7 +73,7 @@ public class LevelRunContext
     }
 
     /// <summary>
-    /// 建立此 Context 的淺拷貝（用於 Retry 時保持原始資料）。
+    /// Create a shallow copy of this Context (used to preserve the original data on Retry).
     /// </summary>
     public LevelRunContext Clone()
     {

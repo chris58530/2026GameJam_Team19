@@ -1,36 +1,36 @@
 using UnityEngine;
 
 /// <summary>
-/// GameScene 的核心控制器。
-/// 負責讀取 GameFlowManager 中的關卡資訊，實例化關卡 Prefab，
-/// 並將 LevelRunContext 傳遞給關卡中實作 ILevelInitializable 的元件。
+/// Core controller for the GameScene.
+/// Reads the level info from GameFlowManager, instantiates the level Prefab,
+/// and passes the LevelRunContext to components in the level that implement ILevelInitializable.
 /// 
-/// PauseMenuCanvas 在第一次載入關卡時生成，之後不再銷毀。
-/// Retry 只會重新實例化關卡 Prefab，不影響 PauseMenu。
+/// PauseMenuCanvas is created the first time a level is loaded and is never destroyed afterwards.
+/// Retry only re-instantiates the level Prefab; it does not affect the PauseMenu.
 /// 
-/// 設定方式：
-///   1. 在 GameScene 中建立空 GameObject，命名為 "GameSceneController"
-///   2. 掛上此腳本
-///   3. 建立空子物件 "LevelContainer" 作為關卡 Prefab 的父物件
-///   4. 將 LevelContainer 拖入 Inspector 的 levelContainer 欄位
-///   5. 將 PauseMenuCanvas Prefab 拖入 pauseMenuPrefab 欄位
+/// Setup:
+///   1. Create an empty GameObject in the GameScene named "GameSceneController"
+///   2. Attach this script
+///   3. Create an empty child object "LevelContainer" as the parent for the level Prefab
+///   4. Drag LevelContainer into the levelContainer field in the Inspector
+///   5. Drag the PauseMenuCanvas Prefab into the pauseMenuPrefab field
 /// </summary>
 public class GameSceneController : MonoBehaviour
 {
     public static GameSceneController Instance { get; private set; }
 
-    [Header("關卡容器")]
-    [Tooltip("關卡 Prefab 會實例化在此 Transform 底下")]
+    [Header("Level Container")]
+    [Tooltip("The level Prefab will be instantiated under this Transform")]
     [SerializeField] private Transform levelContainer;
 
-    [Header("暫停選單")]
+    [Header("Pause Menu")]
     [Tooltip("PauseMenuCanvas Prefab")]
     [SerializeField] private GameObject pauseMenuPrefab;
 
-    /// <summary>當前實例化的關卡 GameObject。</summary>
+    /// <summary>The currently instantiated level GameObject.</summary>
     public GameObject CurrentLevelInstance { get; private set; }
 
-    /// <summary>PauseMenu 實例（生成後不銷毀）。</summary>
+    /// <summary>PauseMenu instance (not destroyed after being created).</summary>
     private GameObject pauseMenuInstance;
 
     private void Awake()
@@ -40,21 +40,21 @@ public class GameSceneController : MonoBehaviour
 
     private void Start()
     {
-        // 生成 PauseMenu（只生成一次，之後不銷毀）
+        // Spawn the PauseMenu (created only once, never destroyed afterwards)
         SpawnPauseMenu();
 
-        // 載入關卡
+        // Load the level
         LoadSelectedLevel();
     }
 
     /// <summary>
-    /// 從 GameFlowManager 讀取當前選定的關卡並實例化。
+    /// Reads the currently selected level from GameFlowManager and instantiates it.
     /// </summary>
     public void LoadSelectedLevel()
     {
         if (GameFlowManager.Instance == null)
         {
-            Debug.LogError("[GameSceneController] GameFlowManager 不存在！返回選關畫面。");
+            Debug.LogError("[GameSceneController] GameFlowManager does not exist! Returning to the level selector.");
             FallbackToLevelSelector();
             return;
         }
@@ -63,39 +63,39 @@ public class GameSceneController : MonoBehaviour
 
         if (levelDef == null)
         {
-            Debug.LogWarning("[GameSceneController] 沒有選定的關卡！返回選關畫面。");
+            Debug.LogWarning("[GameSceneController] No level selected! Returning to the level selector.");
             FallbackToLevelSelector();
             return;
         }
 
         if (levelDef.levelPrefab == null)
         {
-            Debug.LogError($"[GameSceneController] 關卡 {levelDef.levelId} 的 Prefab 為 null！");
+            Debug.LogError($"[GameSceneController] The Prefab for level {levelDef.levelId} is null!");
             FallbackToLevelSelector();
             return;
         }
 
         if (levelContainer == null)
         {
-            Debug.LogWarning("[GameSceneController] levelContainer 未設定，使用自身 Transform。");
+            Debug.LogWarning("[GameSceneController] levelContainer is not set, using this Transform.");
             levelContainer = transform;
         }
 
-        // 只清除關卡，不動 PauseMenu
+        // Only clear the level, leave the PauseMenu alone
         ClearLevelOnly();
 
-        // 實例化關卡 Prefab
+        // Instantiate the level Prefab
         CurrentLevelInstance = Instantiate(levelDef.levelPrefab, levelContainer);
         CurrentLevelInstance.name = $"[Level] {levelDef.displayName}";
 
-        Debug.Log($"[GameSceneController] 已載入關卡: {levelDef.displayName} (ID: {levelDef.levelId})");
+        Debug.Log($"[GameSceneController] Loaded level: {levelDef.displayName} (ID: {levelDef.levelId})");
 
-        // 傳遞 LevelRunContext
+        // Pass the LevelRunContext
         InitializeLevelComponents();
     }
 
     /// <summary>
-    /// 只清除關卡實例，不影響 PauseMenu。
+    /// Clears only the level instance, leaving the PauseMenu untouched.
     /// </summary>
     private void ClearLevelOnly()
     {
@@ -107,7 +107,7 @@ public class GameSceneController : MonoBehaviour
     }
 
     /// <summary>
-    /// 清除關卡（對外用，場景切換時呼叫）。
+    /// Clears the level (public, called on scene transitions).
     /// </summary>
     public void ClearCurrentLevel()
     {
@@ -115,8 +115,8 @@ public class GameSceneController : MonoBehaviour
     }
 
     /// <summary>
-    /// 重試當前關卡。
-    /// 只重新實例化同一個關卡 Prefab，PauseMenu 不動。
+    /// Retries the current level.
+    /// Only re-instantiates the same level Prefab; the PauseMenu is left untouched.
     /// </summary>
     public void RetryCurrentLevel()
     {
@@ -127,12 +127,12 @@ public class GameSceneController : MonoBehaviour
             GameFlowManager.Instance.CurrentContext.replayIndex++;
         }
 
-        // 重新載入同一個關卡
+        // Reload the same level
         LoadSelectedLevel();
     }
 
     /// <summary>
-    /// 返回關卡選擇畫面。
+    /// Returns to the level selector screen.
     /// </summary>
     public void ReturnToLevelSelector()
     {
@@ -149,12 +149,12 @@ public class GameSceneController : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[GameSceneController] 無法返回選關畫面！");
+            Debug.LogError("[GameSceneController] Unable to return to the level selector!");
         }
     }
 
     /// <summary>
-    /// 返回主選單。
+    /// Returns to the main menu.
     /// </summary>
     public void ReturnToMainMenu()
     {
@@ -171,18 +171,18 @@ public class GameSceneController : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[GameSceneController] 無法返回主選單！");
+            Debug.LogError("[GameSceneController] Unable to return to the main menu!");
         }
     }
 
     /// <summary>
-    /// 生成 PauseMenu（只生成一次）。
+    /// Spawns the PauseMenu (created only once).
     /// </summary>
     private void SpawnPauseMenu()
     {
         if (pauseMenuInstance != null) return;
 
-        // 如果 Inspector 沒設定，嘗試從 Resources 載入
+        // If not set in the Inspector, try loading it from Resources
         if (pauseMenuPrefab == null)
         {
             pauseMenuPrefab = Resources.Load<GameObject>("PauseMenuCanvas");
@@ -190,13 +190,13 @@ public class GameSceneController : MonoBehaviour
 
         if (pauseMenuPrefab == null)
         {
-            Debug.LogError("[GameSceneController] pauseMenuPrefab 未設定！請在 Inspector 拖入 PauseMenuCanvas Prefab，或放一份到 Assets/Resources/ 資料夾。");
+            Debug.LogError("[GameSceneController] pauseMenuPrefab is not set! Drag the PauseMenuCanvas Prefab into the Inspector, or place a copy in the Assets/Resources/ folder.");
             return;
         }
 
         pauseMenuInstance = Instantiate(pauseMenuPrefab);
         pauseMenuInstance.name = "PauseMenuCanvas";
-        Debug.Log("[GameSceneController] PauseMenuCanvas 已生成。");
+        Debug.Log("[GameSceneController] PauseMenuCanvas has been spawned.");
     }
 
     private void InitializeLevelComponents()
@@ -206,7 +206,7 @@ public class GameSceneController : MonoBehaviour
         LevelRunContext context = GameFlowManager.Instance?.CurrentContext;
         if (context == null)
         {
-            Debug.LogWarning("[GameSceneController] LevelRunContext 為 null，跳過初始化。");
+            Debug.LogWarning("[GameSceneController] LevelRunContext is null, skipping initialization.");
             return;
         }
 
@@ -214,7 +214,7 @@ public class GameSceneController : MonoBehaviour
 
         if (initializables.Length > 0)
         {
-            Debug.Log($"[GameSceneController] 找到 {initializables.Length} 個 ILevelInitializable 元件，開始初始化...");
+            Debug.Log($"[GameSceneController] Found {initializables.Length} ILevelInitializable components, starting initialization...");
             foreach (var initializable in initializables)
             {
                 initializable.Initialize(context);
@@ -230,7 +230,7 @@ public class GameSceneController : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[GameSceneController] 無法回退！SceneLoadManager 不存在。");
+            Debug.LogError("[GameSceneController] Unable to fall back! SceneLoadManager does not exist.");
         }
     }
 }

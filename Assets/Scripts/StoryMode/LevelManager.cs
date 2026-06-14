@@ -1,39 +1,39 @@
 using UnityEngine;
 
 /// <summary>
-/// 關卡輔助腳本。每個關卡場景放一個。
-/// 提供 OnLevelCleared() 和 OnLevelFailed() 方法，
-/// 讓關卡中的任何機制（如碰到終點、時間到、碰到危險）都能觸發流程推進。
+/// Level helper script. Place one in each level scene.
+/// Provides OnLevelCleared() and OnLevelFailed() methods so that any mechanic in the level
+/// (such as reaching the goal, a timer running out, or hitting a hazard) can trigger flow progression.
 /// 
-/// 設定方式：
-///   1. 在每個關卡場景（Level01, Level02, Level03...）中建立空 GameObject
-///   2. 命名為 "LevelManager"
-///   3. 掛上此腳本
+/// Setup:
+///   1. In each level scene (Level01, Level02, Level03...), create an empty GameObject
+///   2. Name it "LevelManager"
+///   3. Attach this script
 /// 
-/// 使用範例（在其他腳本中呼叫）：
-///   // 玩家到達終點時
+/// Usage example (called from other scripts):
+///   // When the player reaches the goal
 ///   LevelManager levelMgr = FindAnyObjectByType&lt;LevelManager&gt;();
 ///   levelMgr.OnLevelCleared();
 /// 
-///   // 或使用靜態捷徑（如果此腳本存在於場景中）
+///   // Or use the static shortcut (if this script exists in the scene)
 ///   LevelManager.Instance.OnLevelCleared();
 ///   LevelManager.Instance.OnLevelFailed();
 /// 
-/// 整合現有 LoopManager：
-///   在 LoopManager.TryExit() 中勝利時，呼叫 LevelManager.Instance.OnLevelCleared();
-///   在 LoopManager.FailLevel() 中失敗時，呼叫 LevelManager.Instance.OnLevelFailed();
-///   （或在 LoopManager 之外偵測 LoopManager.Won == true 時呼叫）
+/// Integrating with the existing LoopManager:
+///   On victory in LoopManager.TryExit(), call LevelManager.Instance.OnLevelCleared();
+///   On failure in LoopManager.FailLevel(), call LevelManager.Instance.OnLevelFailed();
+///   (or detect LoopManager.Won == true outside of LoopManager and call it then)
 /// </summary>
 public class LevelManager : MonoBehaviour
 {
-    /// <summary>場景中的 LevelManager 實例（每個場景一個）。</summary>
+    /// <summary>The LevelManager instance in the scene (one per scene).</summary>
     public static LevelManager Instance { get; private set; }
 
-    [Header("設定")]
-    [Tooltip("通關後延遲幾秒再切換場景（用於播放通關動畫/音效，建議 2~3 秒讓玩家看到 CLEAR 文字）")]
+    [Header("Settings")]
+    [Tooltip("How many seconds to delay before switching scenes after clearing (used to play a clear animation/sound; 2~3 seconds is recommended so the player can see the CLEAR text)")]
     [SerializeField] private float clearDelay = 2.5f;
 
-    [Tooltip("失敗後延遲幾秒再切換場景（用於播放失敗動畫/音效）")]
+    [Tooltip("How many seconds to delay before switching scenes after failing (used to play a fail animation/sound)")]
     [SerializeField] private float failDelay = 2f;
 
     private bool hasTriggered = false;
@@ -50,18 +50,18 @@ public class LevelManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 關卡通關。呼叫此方法後會自動推進到下一關或結局。
+    /// Level cleared. After calling this method, it automatically advances to the next level or the ending.
     /// 
-    /// 使用方式：
-    ///   - 直接呼叫：LevelManager.Instance.OnLevelCleared()
-    ///   - 或在 Inspector 中連接按鈕/事件到此方法
+    /// Usage:
+    ///   - Call directly: LevelManager.Instance.OnLevelCleared()
+    ///   - Or connect a button/event to this method in the Inspector
     /// </summary>
     public void OnLevelCleared()
     {
         if (hasTriggered) return;
         hasTriggered = true;
 
-        Debug.Log($"[LevelManager] 關卡通關！目前第 {GetCurrentLevelDisplay()} 關。");
+        Debug.Log($"[LevelManager] Level cleared! Currently on level {GetCurrentLevelDisplay()}.");
 
         if (clearDelay > 0f)
         {
@@ -74,18 +74,18 @@ public class LevelManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 關卡失敗。呼叫此方法後會自動前往 Fail Ending。
+    /// Level failed. After calling this method, it automatically goes to the Fail Ending.
     /// 
-    /// 使用方式：
-    ///   - 直接呼叫：LevelManager.Instance.OnLevelFailed()
-    ///   - 或在 Inspector 中連接按鈕/事件到此方法
+    /// Usage:
+    ///   - Call directly: LevelManager.Instance.OnLevelFailed()
+    ///   - Or connect a button/event to this method in the Inspector
     /// </summary>
     public void OnLevelFailed()
     {
         if (hasTriggered) return;
         hasTriggered = true;
 
-        Debug.Log($"[LevelManager] 關卡失敗！目前第 {GetCurrentLevelDisplay()} 關。");
+        Debug.Log($"[LevelManager] Level failed! Currently on level {GetCurrentLevelDisplay()}.");
 
         if (failDelay > 0f)
         {
@@ -98,14 +98,14 @@ public class LevelManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 重設觸發狀態（用於關卡內部重試，不切換場景的情況）。
+    /// Reset the trigger state (used for retrying within a level without switching scenes).
     /// </summary>
     public void ResetTrigger()
     {
         hasTriggered = false;
     }
 
-    // ========== 內部方法 ==========
+    // ========== Internal Methods ==========
 
     private void ExecuteCompleteLevel()
     {
@@ -115,7 +115,7 @@ public class LevelManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[LevelManager] StoryFlowManager 不存在！無法推進流程。");
+            Debug.LogError("[LevelManager] StoryFlowManager does not exist! Cannot advance the flow.");
         }
     }
 
@@ -127,7 +127,7 @@ public class LevelManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[LevelManager] StoryFlowManager 不存在！無法推進流程。");
+            Debug.LogError("[LevelManager] StoryFlowManager does not exist! Cannot advance the flow.");
         }
     }
 
