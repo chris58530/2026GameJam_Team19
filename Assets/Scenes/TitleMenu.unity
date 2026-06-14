@@ -425,7 +425,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TitleMenuUI
   startButton: {fileID: 678565071}
   quitButton: {fileID: 0}
-  backgroundVideo: {fileID: 1103481738}
+  backgroundClip: {fileID: 0}
 --- !u!114 &1103481734
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -579,9 +579,9 @@ MonoBehaviour:
   titleMenuScene: TitleMenu
   openingAnimationScene: OpeningAnimation
   levelScenes:
-  - Game0
   - Game1
   - Game2
+  - Game3
   endingScene: Ending
 --- !u!4 &1334741324
 Transform:
