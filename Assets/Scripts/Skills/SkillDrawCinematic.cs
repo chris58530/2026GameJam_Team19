@@ -28,8 +28,8 @@ public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
     [Tooltip("zoom in / out 的秒數")]
     public float zoomDuration = 0.4f;
 
-    [Tooltip("聚焦玩家時的偏移")]
-    public Vector2 focusOffset = new Vector2(0f, 0.5f);
+    [Tooltip("zoom in 聚焦時的相機偏移 (相機看的點相對玩家)。Y 設正值會把相機中心往上抬,讓主角落在畫面下方、上方留給抽牌 UI。")]
+    public Vector2 focusOffset = new Vector2(0f, 2f);
 
     [Header("喝酒動畫")]
     [Tooltip("玩家 Animator (可選)。留空會自動從玩家身上找;再沒有就用佔位 tween")]
@@ -118,7 +118,23 @@ public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
         // zoom out 回原本
         if (cam != null)
         {
-            cam.transform.DOMove(_baseCamPos, zoomDuration).SetUpdate(true).SetEase(Ease.InOutCubic);
+            // 目標位置:直接對齊「玩家當前位置 + 跟隨偏移」,而不是進演出前記下的舊相機座標 (_baseCamPos)。
+            // 否則若抽卡時相機還沒貼齊玩家 (例如剛跳完還在追),zoom out 會先飛回舊點、follow 再啟用又拉到主角,
+            // 看起來就是「先移動到某處才移動到主角」的兩段式跳動。
+            // 暫停期間 Time.timeScale = 0,CameraFollow2D 不會自行更新,所以這裡用 tween 把相機帶到正確落點。
+            Vector3 outTarget = _baseCamPos;
+            if (_player != null)
+            {
+                Vector3 followOffset = (follow != null)
+                    ? follow.offset
+                    : new Vector3(focusOffset.x, focusOffset.y, 0f);
+                outTarget = new Vector3(
+                    _player.position.x + followOffset.x,
+                    _player.position.y + followOffset.y,
+                    cam.transform.position.z);
+            }
+
+            cam.transform.DOMove(outTarget, zoomDuration).SetUpdate(true).SetEase(Ease.InOutCubic);
             DOTween.To(() => cam.orthographicSize, x => cam.orthographicSize = x, _baseSize, zoomDuration)
                 .SetUpdate(true).SetEase(Ease.InOutCubic);
             yield return new WaitForSecondsRealtime(zoomDuration);
