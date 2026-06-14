@@ -790,7 +790,7 @@ MonoBehaviour:
   follow: {fileID: 0}
   zoomInSize: 3.5
   zoomDuration: 0.4
-  focusOffset: {x: 0, y: 0.5}
+  focusOffset: {x: 0, y: 2}
   playerAnimator: {fileID: 0}
   drinkTrigger: Drink
   drinkDuration: 0.8
@@ -815,7 +815,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6948961938894101060, guid: aa1033d4077884b759950c2bb51285c8, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -5.74
+      value: -6.226
       objectReference: {fileID: 0}
     - target: {fileID: 6948961938894101060, guid: aa1033d4077884b759950c2bb51285c8, type: 3}
       propertyPath: m_LocalPosition.z
@@ -898,7 +898,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3116156236628685182, guid: fb85a17d59c3e4ddda128815d5b31df5, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -5.74
+      value: -6.226
       objectReference: {fileID: 0}
     - target: {fileID: 3116156236628685182, guid: fb85a17d59c3e4ddda128815d5b31df5, type: 3}
       propertyPath: m_LocalPosition.z
