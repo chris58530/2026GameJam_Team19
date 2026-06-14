@@ -8,7 +8,11 @@ public class DoorExit : MonoBehaviour
 {
     public string playerTag = "Player";
 
+    [Tooltip("玩家到達門口時播放的音效名稱")]
+    public string arriveSfxName = "Conv-1";
+
     private DeadBodyManager _manager;
+    private bool _sfxPlayed;
 
     private void Awake()
     {
@@ -20,6 +24,13 @@ public class DoorExit : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (!other.CompareTag(playerTag)) return;
+
+        if (!_sfxPlayed && SoundManager.Instance != null && !string.IsNullOrEmpty(arriveSfxName))
+        {
+            SoundManager.Instance.PlaySFX(arriveSfxName);
+            _sfxPlayed = true;
+        }
+
         if (_manager != null) _manager.TryExit();
     }
 }
