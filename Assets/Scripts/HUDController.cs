@@ -28,8 +28,8 @@ public class HUDController : MonoBehaviour
 
         if (timeText != null)
         {
-            int sec = Mathf.Max(0, Mathf.CeilToInt(manager.TimeLeft));
-            timeText.text = "TIME: " + sec + " s";
+            float sec = Mathf.Max(0f, manager.TimeLeft);
+            timeText.text = sec.ToString("F3") + " sec";
             timeText.color = manager.TimeLeft <= 3f ? Red : White;
         }
 
