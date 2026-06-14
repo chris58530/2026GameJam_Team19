@@ -298,6 +298,10 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
 
             if (SoundManager.Instance != null)
                 SoundManager.Instance.PlaySFX("LevelClear");
+
+            // Story Mode 連接：通知 LevelManager 進入下一關
+            if (LevelManager.Instance != null)
+                LevelManager.Instance.OnLevelCleared();
         }
     }
 
