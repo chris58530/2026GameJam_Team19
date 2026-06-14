@@ -37,6 +37,9 @@ public class CorpseSkillSystem : MonoBehaviour
     [Min(1)]
     public int displayCount = 3;
 
+    [Tooltip("不連續重複保護:本次抽卡會排除上次選定的技能(若牌庫還有其他種類)")]
+    public bool avoidConsecutiveRepeat = true;
+
     [Header("拉霸設定 (Slot 模式)")]
     [Tooltip("是否允許玩家按鍵(空白/K)提前停止;結果不受按下時機影響")]
     public bool slotAllowManualStop = true;
@@ -60,11 +63,36 @@ public class CorpseSkillSystem : MonoBehaviour
     public float slotResultHold = 0.35f;
 
     [Header("技能參數")]
-    [Tooltip("加速倍率 (X = 水平移動速度, Y = 跳躍力)")]
-    public Vector2 speedMultiplier = new Vector2(2f, 2f);
+    [Tooltip("加速倍率 (僅影響水平移動速度)。建議 1.5~1.8,過高會失真")]
+    public float speedMultiplier = 1.6f;
 
     [Tooltip("加速離開後每秒遞減的倍率量 (例如 2 = 0.5 秒回到原速)")]
     public float speedDecayPerSecond = 2f;
+
+    [Tooltip("彈跳屍體的跳躍力倍率 (踩著按跳才生效)。約 2~3 個身位高")]
+    public float bounceMultiplier = 2.4f;
+
+    [Tooltip("隨機彈射:朝上隨機角度下限 (度,90 = 正上方)")]
+    public float randomLaunchMinAngle = 50f;
+
+    [Tooltip("隨機彈射:朝上隨機角度上限 (度)")]
+    public float randomLaunchMaxAngle = 130f;
+
+    [Tooltip("隨機彈射:觸發後冷卻秒數")]
+    public float randomLaunchCooldown = 0.4f;
+
+    [Tooltip("消失再現:碰到後到消失的延遲下限 (秒)")]
+    public float blinkDisappearDelayMin = 0.8f;
+
+    [Tooltip("消失再現:碰到後到消失的延遲上限 (秒)")]
+    public float blinkDisappearDelayMax = 1.5f;
+
+    [Tooltip("消失再現:消失後到重新出現的秒數")]
+    public float blinkReappearDelay = 1f;
+
+    [Tooltip("限次使用:屍體可被使用的總次數")]
+    [Min(1)]
+    public int limitedUseCount = 3;
 
     [Tooltip("移動屍體的單程距離")]
     public float moverDistance = 3f;
@@ -78,9 +106,13 @@ public class CorpseSkillSystem : MonoBehaviour
     [Header("屍體顏色 (依技能區分,會保留原本透明度)")]
     public Color colorNormal = new Color(0.8f, 0.35f, 0.35f);
     public Color colorSpeed = new Color(0.35f, 0.85f, 0.4f);
+    public Color colorBounce = new Color(1f, 0.55f, 0.2f);
     public Color colorHorizontal = new Color(0.4f, 0.6f, 0.95f);
     public Color colorVertical = new Color(0.95f, 0.75f, 0.3f);
     public Color colorTeleport = new Color(0.75f, 0.4f, 0.9f);
+    public Color colorRandomLaunch = new Color(0.95f, 0.85f, 0.2f);
+    public Color colorBlinkOut = new Color(0.55f, 0.85f, 0.9f);
+    public Color colorLimitedUse = new Color(0.6f, 0.8f, 1f);
 
     /// <summary>是否正在選卡 (選卡期間管理器應暫停自身死亡/計時邏輯)。</summary>
     public bool IsBusy { get; private set; }
@@ -95,7 +127,16 @@ public class CorpseSkillSystem : MonoBehaviour
     // Slot 狀態
     private CorpseSkillType _slotResult;
     private bool _slotStopRequested;
-    private Coroutine _slotRoutine;
+
+    // 選卡流程
+    private bool _selectionUIVisible;   // UI 是否顯示(intro 完才顯示;也當作接受輸入的閘門)
+    private bool _classicResolved;
+    private CorpseSkillType _classicResult;
+    private ISkillDrawPresenter _presenter;
+
+    // 不連續重複保護:記住上次選定(本次抽牌會排除這項,若牌庫尚有其他種類)
+    private bool _hasLastDrawn;
+    private CorpseSkillType _lastDrawn;
 
     // Slot uGUI
     private GameObject _uiRoot;
@@ -115,6 +156,12 @@ public class CorpseSkillSystem : MonoBehaviour
     }
 
     private int GroundMask => groundLayer >= 0 ? (1 << groundLayer) : ~0;
+
+    /// <summary>清除「上次抽到」記憶。管理器重置整關時呼叫,讓下一次抽不受先前影響。</summary>
+    public void ResetMemory()
+    {
+        _hasLastDrawn = false;
+    }
 
     /// <summary>牌庫是否有可用的卡。</summary>
     public bool HasUsableDeck()
@@ -138,84 +185,70 @@ public class CorpseSkillSystem : MonoBehaviour
             return;
         }
 
+        if (_presenter == null) _presenter = GetComponent<ISkillDrawPresenter>();
+
         _onChosen = onChosen;
+        IsBusy = true;
+        _selectionUIVisible = false;
+        Time.timeScale = 0f;
+        StartCoroutine(SelectionFlow());
+    }
 
+    /// <summary>抽卡主流程:intro(演出)→ 抽卡(Classic/Slot)→ outro(演出)→ 收尾。</summary>
+    private IEnumerator SelectionFlow()
+    {
+        // 1) 進場演出 (zoom in 等)
+        if (_presenter != null) yield return StartCoroutine(_presenter.PlayIntro());
+
+        CorpseSkillType result;
+
+        // 2) 抽卡
         if (selectionMode == SelectionMode.Slot)
-            BeginSlot();
-        else
-            BeginClassic();
-    }
-
-    // ---------------- Classic ----------------
-
-    private void BeginClassic()
-    {
-        DrawHand();
-        if (_hand.Count == 0)
         {
-            ArmedSkill = CorpseSkillType.Normal;
-            FinishSelection(ArmedSkill);
-            return;
+            _slotResult = WeightedDrawOne();
+            _slotStopRequested = false;
+            EnsureUI();
+            _uiRoot.SetActive(true);
+            _selectionUIVisible = true;
+
+            yield return StartCoroutine(SlotSpin());
+
+            result = _slotResult;
+            _selectionUIVisible = false;
+            if (_uiRoot != null) _uiRoot.SetActive(false);
         }
-
-        IsBusy = true;
-        Time.timeScale = 0f;
-    }
-
-    private void Update()
-    {
-        if (!IsBusy) return;
-
-        var kb = Keyboard.current;
-        if (kb == null) return;
-
-        if (selectionMode == SelectionMode.Classic)
+        else // Classic
         {
-            for (int i = 0; i < _hand.Count && i < 9; i++)
+            DrawHand();
+            if (_hand.Count == 0)
             {
-                var key = kb[Key.Digit1 + i];
-                if (key != null && key.wasPressedThisFrame)
-                {
-                    ChooseClassic(i);
-                    break;
-                }
+                result = CorpseSkillType.Normal;
+            }
+            else
+            {
+                _classicResolved = false;
+                _selectionUIVisible = true;
+                while (!_classicResolved) yield return null;
+                result = _classicResult;
+                _selectionUIVisible = false;
             }
         }
-        else // Slot:按鍵提前停
-        {
-            if (slotAllowManualStop && !_slotStopRequested &&
-                (kb.spaceKey.wasPressedThisFrame || kb.kKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame))
-            {
-                _slotStopRequested = true;
-            }
-        }
+
+        // 3) 退場演出 (喝酒 + zoom out)
+        if (_presenter != null) yield return StartCoroutine(_presenter.PlayOutro(result));
+
+        // 4) 收尾、恢復遊戲
+        FinishSelection(result);
     }
 
-    private void ChooseClassic(int index)
+    /// <summary>拉霸滾動動畫:循環 → 減速停在 _slotResult → 衝擊回饋 → 停留。</summary>
+    private IEnumerator SlotSpin()
     {
-        if (index < 0 || index >= _hand.Count) return;
-        FinishSelection(_hand[index]);
-    }
-
-    // ---------------- Slot ----------------
-
-    private void BeginSlot()
-    {
-        _slotResult = WeightedDrawOne();
-        _slotStopRequested = false;
-        IsBusy = true;
-        Time.timeScale = 0f;
-
-        EnsureUI();
-        _uiRoot.SetActive(true);
-        if (_slotRoutine != null) StopCoroutine(_slotRoutine);
-        _slotRoutine = StartCoroutine(SlotRoutine());
-    }
-
-    private IEnumerator SlotRoutine()
-    {
-        var cycle = DistinctDeckTypes();
-        if (cycle.Count == 0) { FinishSlot(CorpseSkillType.Normal); yield break; }
+        // 循環顯示「可抽的技能種類」(已套用不連續重複保護)
+        var available = BuildAvailableWeights();
+        var cycle = new List<CorpseSkillType>(available.Keys);
+        if (cycle.Count == 0) cycle = DistinctDeckTypes(); // 退路:萬一沒有可用,顯示牌庫所有種類
+        if (cycle.Count == 0) { _slotResult = CorpseSkillType.Normal; yield break; }
 
         int idx = 0;
 
@@ -252,9 +285,8 @@ public class CorpseSkillSystem : MonoBehaviour
         ShowCardType(_slotResult);
         yield return StartCoroutine(ImpactFeedback());
 
-        // 4) 停留後完成
+        // 4) 停留
         yield return new WaitForSecondsRealtime(slotResultHold);
-        FinishSlot(_slotResult);
     }
 
     /// <summary>轉動時每格的小脈動。</summary>
@@ -291,24 +323,55 @@ public class CorpseSkillSystem : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.35f);
     }
 
-    private void FinishSlot(CorpseSkillType result)
-    {
-        if (_uiRoot != null) _uiRoot.SetActive(false);
-        _slotRoutine = null;
-        FinishSelection(result);
-    }
-
-    // ---------------- 共用收尾 ----------------
-
     private void FinishSelection(CorpseSkillType skill)
     {
         ArmedSkill = skill;
+        _hasLastDrawn = true;
+        _lastDrawn = skill;
         IsBusy = false;
         Time.timeScale = 1f;
 
         var cb = _onChosen;
         _onChosen = null;
         cb?.Invoke(ArmedSkill);
+    }
+
+    // ---------------- 選卡輸入 ----------------
+
+    private void Update()
+    {
+        if (!IsBusy || !_selectionUIVisible) return;
+
+        var kb = Keyboard.current;
+        if (kb == null) return;
+
+        if (selectionMode == SelectionMode.Classic)
+        {
+            for (int i = 0; i < _hand.Count && i < 9; i++)
+            {
+                var key = kb[Key.Digit1 + i];
+                if (key != null && key.wasPressedThisFrame)
+                {
+                    ChooseClassic(i);
+                    break;
+                }
+            }
+        }
+        else // Slot:按鍵提前停 (結果不變)
+        {
+            if (slotAllowManualStop && !_slotStopRequested &&
+                (kb.spaceKey.wasPressedThisFrame || kb.kKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame))
+            {
+                _slotStopRequested = true;
+            }
+        }
+    }
+
+    private void ChooseClassic(int index)
+    {
+        if (index < 0 || index >= _hand.Count) return;
+        _classicResult = _hand[index];
+        _classicResolved = true;
     }
 
     // ---------------- 抽牌 ----------------
@@ -325,6 +388,15 @@ public class CorpseSkillSystem : MonoBehaviour
         return weights;
     }
 
+    /// <summary>取得「可抽的技能權重」:套用不連續重複保護(若牌庫至少還有 2 種,排除上次抽到的)。</summary>
+    private Dictionary<CorpseSkillType, int> BuildAvailableWeights()
+    {
+        var weights = BuildWeights();
+        if (avoidConsecutiveRepeat && _hasLastDrawn && weights.Count > 1 && weights.ContainsKey(_lastDrawn))
+            weights.Remove(_lastDrawn);
+        return weights;
+    }
+
     private List<CorpseSkillType> DistinctDeckTypes()
     {
         var list = new List<CorpseSkillType>();
@@ -332,10 +404,10 @@ public class CorpseSkillSystem : MonoBehaviour
         return list;
     }
 
-    /// <summary>依權重抽一張。</summary>
+    /// <summary>依權重抽一張(套用不連續重複保護)。</summary>
     private CorpseSkillType WeightedDrawOne()
     {
-        var weights = BuildWeights();
+        var weights = BuildAvailableWeights();
         int total = 0;
         foreach (var kv in weights) total += kv.Value;
         if (total <= 0) return CorpseSkillType.Normal;
@@ -350,11 +422,11 @@ public class CorpseSkillSystem : MonoBehaviour
         return CorpseSkillType.Normal;
     }
 
-    /// <summary>Classic:依權重抽出 displayCount 張不重複種類的卡。</summary>
+    /// <summary>Classic:依權重抽出 displayCount 張不重複種類的卡(套用不連續重複保護)。</summary>
     private void DrawHand()
     {
         _hand.Clear();
-        var pool = new List<KeyValuePair<CorpseSkillType, int>>(BuildWeights());
+        var pool = new List<KeyValuePair<CorpseSkillType, int>>(BuildAvailableWeights());
         if (pool.Count == 0) return;
 
         int take = Mathf.Min(displayCount, pool.Count);
@@ -382,7 +454,7 @@ public class CorpseSkillSystem : MonoBehaviour
     {
         if (corpse == null) return;
 
-        var sr = corpse.GetComponent<SpriteRenderer>();
+        var sr = corpse.GetComponentInChildren<SpriteRenderer>();
         if (sr != null)
         {
             Color c = ColorFor(skill);
@@ -397,6 +469,11 @@ public class CorpseSkillSystem : MonoBehaviour
             case CorpseSkillType.Speed:
                 var spd = corpse.AddComponent<CorpseSkill_Speed>();
                 spd.Configure(speedMultiplier, speedDecayPerSecond);
+                break;
+
+            case CorpseSkillType.Bounce:
+                var bnc = corpse.AddComponent<CorpseSkill_Bounce>();
+                bnc.Configure(bounceMultiplier);
                 break;
 
             case CorpseSkillType.HorizontalSway:
@@ -416,6 +493,21 @@ public class CorpseSkillSystem : MonoBehaviour
                 tp.Configure(GroundMask);
                 break;
 
+            case CorpseSkillType.RandomLaunch:
+                var rl = corpse.AddComponent<CorpseSkill_RandomLaunch>();
+                rl.Configure(randomLaunchMinAngle, randomLaunchMaxAngle, randomLaunchCooldown);
+                break;
+
+            case CorpseSkillType.BlinkOut:
+                var bo = corpse.AddComponent<CorpseSkill_BlinkOut>();
+                bo.Configure(blinkDisappearDelayMin, blinkDisappearDelayMax, blinkReappearDelay);
+                break;
+
+            case CorpseSkillType.LimitedUse:
+                var lu = corpse.AddComponent<CorpseSkill_LimitedUse>();
+                lu.Configure(limitedUseCount);
+                break;
+
             case CorpseSkillType.Normal:
             default:
                 break;
@@ -427,9 +519,13 @@ public class CorpseSkillSystem : MonoBehaviour
         switch (skill)
         {
             case CorpseSkillType.Speed: return colorSpeed;
+            case CorpseSkillType.Bounce: return colorBounce;
             case CorpseSkillType.HorizontalSway: return colorHorizontal;
             case CorpseSkillType.VerticalSway: return colorVertical;
             case CorpseSkillType.TeleportDown: return colorTeleport;
+            case CorpseSkillType.RandomLaunch: return colorRandomLaunch;
+            case CorpseSkillType.BlinkOut: return colorBlinkOut;
+            case CorpseSkillType.LimitedUse: return colorLimitedUse;
             default: return colorNormal;
         }
     }
@@ -438,7 +534,7 @@ public class CorpseSkillSystem : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!IsBusy || selectionMode != SelectionMode.Classic) return;
+        if (!IsBusy || selectionMode != SelectionMode.Classic || !_selectionUIVisible) return;
 
         var prev = GUI.color;
         GUI.color = new Color(0f, 0f, 0f, 0.5f);

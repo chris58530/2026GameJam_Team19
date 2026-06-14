@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -23,6 +24,12 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
     public CorpseSkillSystem skillSystem;
 
     [Header("殘影設定")]
+    [Tooltip("屍體 prefab。指定後改用此 prefab 生成屍體 (外觀、碰撞體大小由 prefab 決定,自己編輯)。留空則用下方參數程式生成。")]
+    public GameObject ghostPrefab;
+
+    [Tooltip("使用 prefab 時,是否把屍體圖片換成 FALL 動畫最後一幀 (關閉則用 prefab 自己的圖片)")]
+    public bool overrideGhostSpriteWithDeathFrame = true;
+
     public Sprite ghostSprite;
     public Color ghostColor = new Color(0.85f, 0.3f, 0.3f, 0.7f);
     public Vector2 ghostScale = Vector2.one;
@@ -36,6 +43,9 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
 
     [Header("輪迴設定")]
     public float loopTime = 10f;
+
+    [Tooltip("屍體完全出現後,停留多久 (秒) 讓玩家看清屍體位置,再讓主角從出生點復活")]
+    public float corpseViewDelay = 0.5f;
 
     [Header("失敗設定")]
     [Tooltip("顯示失敗文字的秒數,結束後整關重來")]
@@ -55,6 +65,7 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
     private bool _failed;
     private float _failTimer;
     private string _failReason = "";
+    private bool _dying;
 
     private void Start()
     {
@@ -100,6 +111,9 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
         // 選卡中:暫停本管理器邏輯,交給技能系統處理
         if (skillSystem != null && skillSystem.IsBusy) return;
 
+        // 死亡動畫播放中:暫停計時與輸入,等動畫播完才會變屍體
+        if (_dying) return;
+
         // 按鈕狀態 / 門
         PressedCount = 0;
         if (buttons != null)
@@ -133,35 +147,106 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
     private void LeaveGhostAndRespawn()
     {
         if (_player == null || spawnPoint == null) return;
+        if (_dying) return;
+        StartCoroutine(DeathSequence());
+    }
+
+    /// <summary>
+    /// 死亡流程:
+    /// 1. 播放死亡 (FALL) 動畫,主角留在死亡點 (相機跟著主角,所以停在死亡點)。
+    /// 2. 動畫播完 → 在原地留下屍體 (圖片用 FALL 最後一幀),屍體依技能執行行為。
+    /// 3. 隱藏主角,停留 corpseViewDelay 秒讓玩家看清屍體位置。
+    /// 4. 主角才回到出生點復活、顯示並恢復控制 → 相機開始跟隨主角。
+    /// </summary>
+    private IEnumerator DeathSequence()
+    {
+        _dying = true;
 
         if (SoundManager.Instance != null)
             SoundManager.Instance.PlaySFX("Die");
 
-        var ghost = SpawnGhost(_player.transform.position);
+        // 停止玩家操作與移動,播放死亡動畫並取得動畫長度
+        float wait = 0f;
+        bool flipX = false;
+        if (_pc != null)
+        {
+            _pc.enabled = false;        // 停止移動控制 (FixedUpdate 不再覆蓋動畫)
+            wait = _pc.PlayDeath();     // 播放死亡動畫
+            flipX = _pc.SpriteFlipX;    // 記下死亡時的朝向,屍體沿用
+        }
+        if (_rb != null)
+        {
+            _rb.linearVelocity = Vector2.zero;
+            _rb.gravityScale = 0f;      // 死亡動畫期間定身,不繼續下墜
+        }
+
+        // 等待死亡動畫播放完畢
+        if (wait > 0f)
+            yield return new WaitForSeconds(wait);
+
+        // 動畫播放期間若已宣告失敗 (例如踏入 Hazard),交給失敗流程整關重來,不再生成屍體
+        if (_failed)
+        {
+            _dying = false;
+            yield break;
+        }
+
+        // 在死亡位置留下屍體 (圖片 = FALL 最後一幀)
+        Vector3 deathPos = _player.transform.position;
+        Sprite corpseSprite = (_pc != null) ? _pc.GetDeathLastFrameSprite() : null;
+
+        var ghost = SpawnGhost(deathPos, corpseSprite, flipX);
         if (skillSystem != null && ghost != null)
             skillSystem.ApplySkill(ghost, skillSystem.ArmedSkill);
 
+        // 隱藏主角,畫面只留下屍體 (相機仍停在死亡點,因為主角還沒移動)
+        if (_pc != null) _pc.SetRendererVisible(false);
+
+        // 屍體完全出現後停留一段時間,讓玩家看清楚屍體在哪
+        yield return new WaitForSeconds(corpseViewDelay);
+
+        if (_failed)
+        {
+            _dying = false;
+            yield break;
+        }
+
+        // 主角回到出生點復活,顯示並恢復控制 → 相機開始跟隨主角過去
         _player.transform.position = spawnPoint.position;
         if (_rb != null) _rb.linearVelocity = Vector2.zero;
+        if (_pc != null)
+        {
+            _pc.SetRendererVisible(true);
+            _pc.enabled = true;         // OnEnable 解除死亡鎖定;FixedUpdate 恢復重力
+        }
 
         TimeLeft = loopTime;
         LoopCount++;
 
+        _dying = false;
         BeginLife(); // 抽下一輪的技能
     }
 
-    private GameObject SpawnGhost(Vector3 pos)
+    private GameObject SpawnGhost(Vector3 pos, Sprite overrideSprite = null, bool flipX = false)
     {
+        // 有指定 prefab → 用 prefab 生成 (外觀/碰撞體大小由 prefab 決定),只覆蓋圖片與朝向
+        if (ghostPrefab != null)
+            return SpawnGhostFromPrefab(pos, overrideSprite, flipX);
+
         var go = new GameObject("Ghost_" + (_ghosts.Count + 1));
         go.transform.position = pos;
         go.transform.localScale = new Vector3(ghostScale.x, ghostScale.y, 1f);
         if (ghostLayer >= 0) go.layer = ghostLayer;
 
+        bool useFallFrame = overrideSprite != null;
+
         var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = ghostSprite;
+        sr.sprite = useFallFrame ? overrideSprite : ghostSprite;
         sr.color = ghostColor;
         sr.sortingOrder = ghostSortingOrder;
-        sr.flipY = ghostFlipY;   // 殘影上下顛倒 (玩家圖片倒立)
+        sr.flipX = flipX;
+        // 用 FALL 最後一幀時,圖片本身已是死亡姿勢,不再上下顛倒;否則沿用設定
+        sr.flipY = useFallFrame ? false : ghostFlipY;
 
         var col = go.AddComponent<BoxCollider2D>();
         // 維持殘影碰撞體為固定世界大小 (與玩家一致),抵銷縮放與大圖的影響
@@ -170,6 +255,31 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
         col.size = new Vector2(ghostColliderSize.x / sx, ghostColliderSize.y / sy);
 
         go.AddComponent<Ghost>();
+        _ghosts.Add(go);
+        return go;
+    }
+
+    /// <summary>
+    /// 由 prefab 生成屍體。外觀、碰撞體大小、圖層等都沿用 prefab 設定 (供自行編輯),
+    /// 只覆蓋圖片 (FALL 最後一幀) 與左右朝向。
+    /// </summary>
+    private GameObject SpawnGhostFromPrefab(Vector3 pos, Sprite overrideSprite, bool flipX)
+    {
+        var go = Instantiate(ghostPrefab, pos, Quaternion.identity);
+        go.name = "Ghost_" + (_ghosts.Count + 1);
+
+        // 確保有 Ghost 標記 (按鈕辨識用)
+        if (go.GetComponent<Ghost>() == null)
+            go.AddComponent<Ghost>();
+
+        var sr = go.GetComponentInChildren<SpriteRenderer>();
+        if (sr != null)
+        {
+            if (overrideGhostSpriteWithDeathFrame && overrideSprite != null)
+                sr.sprite = overrideSprite;
+            sr.flipX = flipX;
+        }
+
         _ghosts.Add(go);
         return go;
     }
@@ -210,6 +320,9 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
 
     public void ResetLevel()
     {
+        StopAllCoroutines();
+        _dying = false;
+
         foreach (var g in _ghosts)
             if (g != null) Destroy(g);
         _ghosts.Clear();
@@ -230,6 +343,7 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
             if (_rb != null) _rb.linearVelocity = Vector2.zero;
         }
 
+        if (skillSystem != null) skillSystem.ResetMemory();
         BeginLife();
     }
 

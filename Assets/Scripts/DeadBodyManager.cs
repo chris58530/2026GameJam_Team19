@@ -205,6 +205,7 @@ public class DeadBodyManager : MonoBehaviour, ILevelFailHandler
             if (_playerRb != null) _playerRb.linearVelocity = Vector2.zero;
         }
 
+        if (skillSystem != null) skillSystem.ResetMemory();
         BeginLife();
     }
 
