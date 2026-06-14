@@ -39,6 +39,9 @@ public class MainMenuController : MonoBehaviour
     /// </summary>
     public void StartGame()
     {
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFX("UIClick");
+
         if (SceneLoadManager.Instance == null)
         {
             Debug.LogError("[MainMenuController] SceneLoadManager 不存在！請確認場景中有 SceneLoadManager 物件。");

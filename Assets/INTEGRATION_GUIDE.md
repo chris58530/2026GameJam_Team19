@@ -31,6 +31,7 @@ MainMenuScene → (LoadingScene) → LevelSelectorScene
 
 | 腳本 | 位置 | 用途 |
 |------|------|------|
+| `SoundManager.cs` | `Scripts/Core/` | 全域音效管理 (Singleton, DontDestroyOnLoad) |
 | `GameFlowManager.cs` | `Scripts/Core/` | 全域流程管理 (Singleton, DontDestroyOnLoad) |
 | `SceneLoadManager.cs` | `Scripts/Core/` | 場景載入管理 (Singleton, DontDestroyOnLoad) |
 | `LevelRunContext.cs` | `Scripts/Core/` | 關卡執行時上下文資料 |
@@ -78,6 +79,7 @@ MainMenuScene → (LoadingScene) → LevelSelectorScene
 - EventSystem
 - SceneLoadManager（空 GameObject + 腳本）
 - GameFlowManager（空 GameObject + 腳本）
+- SoundManager（空 GameObject + 腳本）
 
 ### LoadingScene
 - Canvas
@@ -213,14 +215,107 @@ public class MyLevelSetup : MonoBehaviour, ILevelInitializable
 
 ---
 
+## 🔊 SoundManager 音效系統
+
+### 概述
+`SoundManager` 是全域 Singleton（DontDestroyOnLoad），掛在 MainMenuScene 即可跨場景使用。
+支援 **BGM**（背景音樂）和 **SFX**（音效，多聲道）。
+
+### 隊友呼叫方式
+
+#### 播放音效（SFX）
+```csharp
+// 基本播放（用名稱，名稱在 Inspector 設定）
+SoundManager.Instance.PlaySFX("Jump");
+
+// 調整音量比例（0~1）
+SoundManager.Instance.PlaySFX("Hit", 0.5f);
+
+// OneShot 模式（密集音效不互相覆蓋，如腳步聲）
+SoundManager.Instance.PlaySFXOneShot("Footstep");
+```
+
+#### 播放背景音樂（BGM）
+```csharp
+// 播放（自動淡入淡出切換，同一首不會重播）
+SoundManager.Instance.PlayBGM("BattleTheme");
+
+// 停止（含淡出）
+SoundManager.Instance.StopBGM();
+
+// 立即停止（無淡出）
+SoundManager.Instance.StopBGMImmediate();
+```
+
+#### 音量控制（適合 Settings UI 連接）
+```csharp
+SoundManager.Instance.SetBGMVolume(0.7f);  // 0~1
+SoundManager.Instance.SetSFXVolume(0.8f);  // 0~1
+
+float bgmVol = SoundManager.Instance.GetBGMVolume();
+float sfxVol = SoundManager.Instance.GetSFXVolume();
+```
+
+### 場景自動 BGM
+
+SoundManager 的 Inspector 有「場景 BGM 自動綁定」功能，設定好後**切場景自動換音樂**，不需要手動呼叫。
+
+例如：
+| 場景 | BGM |
+|------|-----|
+| MainMenuScene | TitleBGM |
+| LevelSelectorScene | TitleBGM |
+| GameScene | GameBGM |
+| LoadingScene | （不設 = 維持上一首） |
+
+如果某個關卡需要特殊 BGM，在關卡腳本的 `Start()` 裡覆蓋即可：
+```csharp
+void Start()
+{
+    SoundManager.Instance.PlayBGM("BossTheme");
+}
+```
+
+### 常見使用場景
+
+| 場景 | 在哪裡呼叫 | 範例 |
+|------|-----------|------|
+| UI 按鈕點擊 | Button OnClick 事件 | `SoundManager.Instance.PlaySFX("UIClick")` |
+| 玩家跳躍 | PlayerController2D | `SoundManager.Instance.PlaySFX("Jump")` |
+| 玩家死亡 | LoopManager.FailLevel() | `SoundManager.Instance.PlaySFX("Death")` |
+| 通關 | LevelCompleteTrigger | `SoundManager.Instance.PlaySFX("LevelClear")` |
+| 撿道具 | KeyPickup.OnTrigger | `SoundManager.Instance.PlaySFX("Pickup")` |
+
+### 新增音效步驟
+
+1. 把 AudioClip 檔案丟到 `Assets/Audio/` 資料夾
+2. 找到場景中的 **SoundManager** GameObject
+3. 在 Inspector 中展開 SFX（或 BGM）區塊
+4. 點「+ 新增 SFX 音效」
+5. 拖入 AudioClip，點「自動命名」或自己取名
+6. 完成！程式碼用 `PlaySFX("你取的名字")` 呼叫
+
+### 注意事項
+- 音效名稱**區分大小寫**，`"Jump"` ≠ `"jump"`
+- SFX 預設 8 聲道同時播放，可在 Inspector 調整
+- 如果 `SoundManager.Instance` 是 null，代表場景中沒有 SoundManager 物件
+- BGM 同一首切換時不會重播（避免音樂重頭開始）
+- LoadingScene 不綁定 BGM = 音樂自然延續不中斷
+
+---
+
 ## 資料夾結構
 
 ```
 Assets/
+├── Audio/                    ← 音效/音樂檔案放這裡
+│   ├── BGM/
+│   └── SFX/
 ├── Scripts/
 │   ├── Core/
 │   │   ├── GameFlowManager.cs
 │   │   ├── SceneLoadManager.cs
+│   │   ├── SoundManager.cs
 │   │   ├── LevelRunContext.cs
 │   │   └── ILevelInitializable.cs
 │   ├── Levels/

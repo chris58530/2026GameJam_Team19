@@ -134,6 +134,9 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
     {
         if (_player == null || spawnPoint == null) return;
 
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFX("Die");
+
         var ghost = SpawnGhost(_player.transform.position);
         if (skillSystem != null && ghost != null)
             skillSystem.ApplySkill(ghost, skillSystem.ArmedSkill);
@@ -180,6 +183,9 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
             Time.timeScale = 1f;
             if (_rb != null) _rb.linearVelocity = Vector2.zero;
             if (_pc != null) _pc.enabled = false;
+
+            if (SoundManager.Instance != null)
+                SoundManager.Instance.PlaySFX("LevelClear");
         }
     }
 
@@ -191,6 +197,9 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
         _failed = true;
         _failReason = reason;
         _failTimer = failDisplayTime;
+
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFX("Fail");
 
         Time.timeScale = 1f;
         if (_pc != null) _pc.enabled = false;

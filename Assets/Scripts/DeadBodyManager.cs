@@ -132,6 +132,9 @@ public class DeadBodyManager : MonoBehaviour, ILevelFailHandler
     {
         if (_player == null || spawnPoint == null) return;
 
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFX("Die");
+
         SpawnCorpse(_player.transform.position, ArmedSkill);
         Deaths++;
 
@@ -169,6 +172,9 @@ public class DeadBodyManager : MonoBehaviour, ILevelFailHandler
         _failed = true;
         _failReason = reason;
         _failTimer = failDisplayTime;
+
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFX("Fail");
 
         Time.timeScale = 1f;
         if (_pc != null) _pc.enabled = false;
@@ -213,7 +219,11 @@ public class DeadBodyManager : MonoBehaviour, ILevelFailHandler
         if (HasKey)
             Win();
         else
+        {
+            if (SoundManager.Instance != null)
+                SoundManager.Instance.PlaySFX("DoorLocked");
             ShowMessage("NEED A KEY!");
+        }
     }
 
     private void Win()
@@ -221,6 +231,9 @@ public class DeadBodyManager : MonoBehaviour, ILevelFailHandler
         Won = true;
         Time.timeScale = 1f;
         if (_playerRb != null) _playerRb.linearVelocity = Vector2.zero;
+
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFX("LevelClear");
     }
 
     private void ShowMessage(string msg)

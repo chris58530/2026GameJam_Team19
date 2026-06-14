@@ -75,6 +75,9 @@ public class PauseMenuController : MonoBehaviour
         isPaused = true;
         Time.timeScale = 0f;
 
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFX("Pause");
+
         if (pauseMenuPanel != null)
             pauseMenuPanel.SetActive(true);
 
@@ -94,6 +97,9 @@ public class PauseMenuController : MonoBehaviour
     {
         isPaused = false;
         Time.timeScale = 1f;
+
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFX("Resume");
 
         if (pauseMenuPanel != null)
             pauseMenuPanel.SetActive(false);

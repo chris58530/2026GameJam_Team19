@@ -21,6 +21,10 @@ public class KeyPickup : MonoBehaviour
     {
         if (!other.CompareTag(playerTag)) return;
         if (_manager != null) _manager.CollectKey();
+
+        if (SoundManager.Instance != null)
+            SoundManager.Instance.PlaySFX("KeyPickup");
+
         gameObject.SetActive(false);
     }
 }

@@ -63,6 +63,7 @@ public class Mechanism : MonoBehaviour
     private Vector3 _openPos;
     private Collider2D _col;
     private SpriteRenderer _sr;
+    private bool _prevActive;
 
     private void Awake()
     {
@@ -88,6 +89,19 @@ public class Mechanism : MonoBehaviour
     private void Update()
     {
         IsActive = Evaluate();
+
+        // 狀態改變時播放音效
+        if (IsActive && !_prevActive)
+        {
+            if (SoundManager.Instance != null)
+                SoundManager.Instance.PlaySFX(mode == MechanismMode.Gate ? "GateOpen" : "PlatformMove");
+        }
+        else if (!IsActive && _prevActive)
+        {
+            if (SoundManager.Instance != null)
+                SoundManager.Instance.PlaySFX(mode == MechanismMode.Gate ? "GateClose" : "PlatformMove");
+        }
+        _prevActive = IsActive;
 
         Vector3 target = IsActive ? _openPos : _closedPos;
         transform.position = Vector3.MoveTowards(transform.position, target, moveSpeed * Time.deltaTime);

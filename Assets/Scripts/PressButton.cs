@@ -45,6 +45,19 @@ public class PressButton : MonoBehaviour
                 break;
             }
         }
+
+        // 狀態改變時播放音效
+        if (pressed && !IsPressed)
+        {
+            if (SoundManager.Instance != null)
+                SoundManager.Instance.PlaySFX("ButtonPress");
+        }
+        else if (!pressed && IsPressed)
+        {
+            if (SoundManager.Instance != null)
+                SoundManager.Instance.PlaySFX("ButtonRelease");
+        }
+
         IsPressed = pressed;
         UpdateVisual();
     }

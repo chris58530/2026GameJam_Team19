@@ -123,7 +123,15 @@ public class PlayerController2D : MonoBehaviour
         // 地面偵測 (記錄踩到的 collider)
         Vector2 checkPos = (Vector2)transform.position + groundCheckOffset;
         _groundCollider = Physics2D.OverlapCircle(checkPos, groundCheckRadius, groundLayer);
+        bool wasGrounded = _isGrounded;
         _isGrounded = _groundCollider != null;
+
+        // 落地音效
+        if (!wasGrounded && _isGrounded)
+        {
+            if (SoundManager.Instance != null)
+                SoundManager.Instance.PlaySFX("Land");
+        }
 
         // 速度加速:接觸加速屍體期間維持滿倍率,離開後逐軸遞減回 1
         if (_hasPendingBoost)
@@ -148,6 +156,9 @@ public class PlayerController2D : MonoBehaviour
             _jumpRequested = false;
             if (_isGrounded)
             {
+                if (SoundManager.Instance != null)
+                    SoundManager.Instance.PlaySFX("Jump");
+
                 Vector2 v = _rb.linearVelocity;
                 v.y = jumpForce * _speedMul.y;
                 _rb.linearVelocity = v;

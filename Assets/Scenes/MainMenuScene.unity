@@ -472,6 +472,65 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &581618683
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 581618685}
+  - component: {fileID: 581618684}
+  m_Layer: 0
+  m_Name: SoundManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &581618684
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 581618683}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb574c8d6f45d5644a1be46b6dd07b19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SoundManager
+  bgmVolume: 0.32
+  bgmFadeDuration: 1
+  bgmClips:
+  - name: tittle
+    clip: {fileID: 8300000, guid: feff7d3e3d5e1ed41b3d56a2850d121d, type: 3}
+  sceneBGMBindings:
+  - sceneName: 
+    bgmName: 
+  - sceneName: 
+    bgmName: 
+  sfxVolume: 0.65
+  sfxChannelCount: 8
+  sfxClips:
+  - name: 
+    clip: {fileID: 0}
+--- !u!4 &581618685
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 581618683}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 14.33306, y: -2.36156, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &716262506
 GameObject:
   m_ObjectHideFlags: 0
@@ -857,6 +916,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7dc49684d9507494baad57268a977923, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameFlowManager
+  mainMenuSceneAsset: {fileID: 0}
+  levelSelectorSceneAsset: {fileID: 0}
+  gameSceneAsset: {fileID: 0}
   mainMenuSceneName: MainMenuScene
   levelSelectorSceneName: LevelSelectorScene
   gameSceneName: GameScene
@@ -1198,8 +1260,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 327bcae1616c29744afa8aa3616b34c0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MainMenuController
-  targetSceneName: LevelSelectorScene
   targetSceneAsset: {fileID: 0}
+  targetSceneName: LevelSelectorScene
 --- !u!114 &959711579
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1837,3 +1899,4 @@ SceneRoots:
   - {fileID: 959711582}
   - {fileID: 374599006}
   - {fileID: 886137628}
+  - {fileID: 581618685}
