@@ -1,33 +1,33 @@
 using UnityEngine;
 
 /// <summary>
-/// 暫停選單控制器。掛在 GameScene 的 PauseMenuCanvas 上。
-/// 支援暫停/恢復、重試關卡、返回選關畫面、返回主選單。
+/// Pause menu controller. Attach to the PauseMenuCanvas in GameScene.
+/// Supports pause/resume, retry level, return to level selector, and return to main menu.
 /// 
-/// 新架構行為：
-///   - Retry 不再重載整個場景，而是在 GameScene 內重新實例化關卡 Prefab
-///   - 新增 Level Selector 按鈕，返回選關畫面
-///   - 所有場景切換都透過 GameFlowManager
+/// New architecture behavior:
+///   - Retry no longer reloads the whole scene; instead it re-instantiates the level Prefab inside GameScene
+///   - Added a Level Selector button to return to the level selection screen
+///   - All scene transitions go through GameFlowManager
 /// 
-/// 設定方式：
-///   1. 將 PauseMenuCanvas Prefab 放入 GameScene
-///   2. 確認場景中有 EventSystem
-///   3. 完成！按 ESC 即可暫停
+/// Setup:
+///   1. Place the PauseMenuCanvas Prefab into GameScene
+///   2. Make sure the scene has an EventSystem
+///   3. Done! Press ESC to pause
 /// 
-/// 按鈕連接（在 PauseMenuCanvas Prefab 中設定）：
-///   - Resume 按鈕        → ResumeGame()
-///   - Retry 按鈕         → RetryGame()
-///   - Level Selector 按鈕 → ReturnToLevelSelector()
-///   - Main Menu 按鈕     → ReturnToMainMenu()
+/// Button connections (configured in the PauseMenuCanvas Prefab):
+///   - Resume button         -> ResumeGame()
+///   - Retry button          -> RetryGame()
+///   - Level Selector button -> ReturnToLevelSelector()
+///   - Main Menu button      -> ReturnToMainMenu()
 /// </summary>
 public class PauseMenuController : MonoBehaviour
 {
-    [Header("UI 參考（在 Inspector 中連接）")]
-    [Tooltip("暫停選單面板 GameObject")]
+    [Header("UI references (connect in the Inspector)")]
+    [Tooltip("Pause menu panel GameObject")]
     [SerializeField] private GameObject pauseMenuPanel;
 
-    [Header("設定")]
-    [Tooltip("暫停時是否顯示滑鼠游標")]
+    [Header("Settings")]
+    [Tooltip("Whether to show the mouse cursor while paused")]
     [SerializeField] private bool showCursorWhenPaused = true;
 
     private bool isPaused = false;
@@ -42,7 +42,7 @@ public class PauseMenuController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[PauseMenuController] pauseMenuPanel 未設定！請在 Inspector 中連接。");
+            Debug.LogWarning("[PauseMenuController] pauseMenuPanel is not set! Please connect it in the Inspector.");
         }
 
         isPaused = false;
@@ -57,7 +57,7 @@ public class PauseMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// 切換暫停/恢復狀態。
+    /// Toggle between paused and resumed states.
     /// </summary>
     public void TogglePause()
     {
@@ -68,7 +68,7 @@ public class PauseMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// 暫停遊戲。
+    /// Pause the game.
     /// </summary>
     public void PauseGame()
     {
@@ -91,7 +91,7 @@ public class PauseMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// 恢復遊戲。Resume 按鈕呼叫此方法。
+    /// Resume the game. Called by the Resume button.
     /// </summary>
     public void ResumeGame()
     {
@@ -112,8 +112,8 @@ public class PauseMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// 重試當前關卡。Retry 按鈕呼叫此方法。
-    /// 優先在 GameScene 內重新實例化關卡 Prefab（不重載整個場景）。
+    /// Retry the current level. Called by the Retry button.
+    /// Prefers re-instantiating the level Prefab inside GameScene (without reloading the whole scene).
     /// </summary>
     public void RetryGame()
     {
@@ -123,29 +123,29 @@ public class PauseMenuController : MonoBehaviour
         if (pauseMenuPanel != null)
             pauseMenuPanel.SetActive(false);
 
-        // 優先使用 GameSceneController 的重試（不重載場景，更快）
+        // Prefer GameSceneController's retry (faster, no scene reload)
         if (GameSceneController.Instance != null)
         {
             GameSceneController.Instance.RetryCurrentLevel();
         }
-        // 備用：透過 GameFlowManager 重載 GameScene
+        // Fallback: reload GameScene through GameFlowManager
         else if (GameFlowManager.Instance != null)
         {
             GameFlowManager.Instance.RetryCurrentLevel();
         }
-        // 最終回退：重載當前場景
+        // Last resort: reload the current scene
         else if (SceneLoadManager.Instance != null)
         {
             SceneLoadManager.Instance.ReloadCurrentSceneWithLoading();
         }
         else
         {
-            Debug.LogError("[PauseMenuController] 無法重試！沒有找到任何 Manager。");
+            Debug.LogError("[PauseMenuController] Cannot retry! No Manager found.");
         }
     }
 
     /// <summary>
-    /// 返回關卡選擇畫面。Level Selector 按鈕呼叫此方法。
+    /// Return to the level selection screen. Called by the Level Selector button.
     /// </summary>
     public void ReturnToLevelSelector()
     {
@@ -165,12 +165,12 @@ public class PauseMenuController : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[PauseMenuController] 無法返回選關畫面！Manager 不存在。");
+            Debug.LogError("[PauseMenuController] Cannot return to level selector! Manager does not exist.");
         }
     }
 
     /// <summary>
-    /// 返回主選單。Main Menu 按鈕呼叫此方法。
+    /// Return to the main menu. Called by the Main Menu button.
     /// </summary>
     public void ReturnToMainMenu()
     {
@@ -190,7 +190,7 @@ public class PauseMenuController : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[PauseMenuController] 無法返回主選單！Manager 不存在。");
+            Debug.LogError("[PauseMenuController] Cannot return to main menu! Manager does not exist.");
         }
     }
 }

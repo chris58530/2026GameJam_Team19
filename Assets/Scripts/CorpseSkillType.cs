@@ -1,72 +1,72 @@
 using UnityEngine;
 
 /// <summary>
-/// 屍體技能種類。
-/// 玩家在每條命開始時抽卡選一種,該條命留下的屍體就會具備此技能。
+/// Corpse skill type.
+/// At the start of each life the player draws a card to pick one, and the corpse left behind during that life gains this skill.
 /// </summary>
 public enum CorpseSkillType
 {
-    /// <summary>普通屍體,單純當作可踩的平台。</summary>
+    /// <summary>Normal corpse, simply acts as a stand-able platform.</summary>
     Normal,
 
-    /// <summary>加速:碰撞器接觸到該屍體時,玩家「水平移動速度」倍增;離開後隨時間遞減回原速。</summary>
+    /// <summary>Speed: when the collider touches this corpse, the player's "horizontal movement speed" is multiplied; it decays back to normal over time after leaving.</summary>
     Speed,
 
-    /// <summary>左右橫擺:屍體沿水平方向來回移動,碰到障礙物提前折返。</summary>
+    /// <summary>Horizontal sway: the corpse moves back and forth horizontally, turning around early when it hits an obstacle.</summary>
     HorizontalSway,
 
-    /// <summary>上下搖擺:屍體沿垂直方向來回移動,碰到障礙物提前折返。</summary>
+    /// <summary>Vertical sway: the corpse moves back and forth vertically, turning around early when it hits an obstacle.</summary>
     VerticalSway,
 
-    /// <summary>向下傳送:玩家經過該屍體時,被傳送到正下方第一個平台上。</summary>
+    /// <summary>Teleport down: when the player passes this corpse, they are teleported onto the first platform directly below.</summary>
     TeleportDown,
 
-    /// <summary>彈跳:站在這具屍體上按跳,跳躍力倍增(只影響跳躍那一下)。</summary>
+    /// <summary>Bounce: jumping while standing on this corpse multiplies the jump force (affects only that one jump).</summary>
     Bounce,
 
-    /// <summary>隨機彈射 (百威):玩家碰到瞬間自動朝上隨機角度彈飛,力道用玩家原始跳躍力。</summary>
+    /// <summary>Random launch (Budweiser): the moment the player touches it, they are automatically launched upward at a random angle, using the player's original jump force.</summary>
     RandomLaunch,
 
-    /// <summary>消失再現 (Asahi):玩家碰到後延遲一段時間消失,1 秒後再出現。</summary>
+    /// <summary>Blink out (Asahi): after the player touches it, the corpse disappears after a delay and reappears 1 second later.</summary>
     BlinkOut,
 
-    /// <summary>限次使用 (冰結):每次踩上/觸碰算一次,用滿次數後屍體消失 (以透明度提示剩餘次數)。</summary>
+    /// <summary>Limited use (Ice): each stand/touch counts as one use; the corpse disappears once the uses run out (remaining uses are indicated by opacity).</summary>
     LimitedUse,
 }
 
 /// <summary>
-/// 一張技能卡的設定 (用於關卡牌庫)。
-/// type = 技能種類; count = 數量 (作為隨機抽牌的權重,數量越多越容易被抽到)。
-/// 採「無限抽、不消耗」:牌庫永遠不會變少,count 只影響出現機率。
+/// Configuration of a single skill card (used for the level deck).
+/// type = skill type; count = quantity (used as the weight for random draws; the higher the count, the more likely it is drawn).
+/// Uses "infinite draw, no consumption": the deck never shrinks, count only affects the draw probability.
 /// </summary>
 [System.Serializable]
 public class CorpseSkillCard
 {
-    [Tooltip("技能種類")]
+    [Tooltip("Skill type")]
     public CorpseSkillType type = CorpseSkillType.Normal;
 
-    [Tooltip("數量 (抽牌權重,越大越常被抽到)")]
+    [Tooltip("Quantity (draw weight, the higher the more often it is drawn)")]
     [Min(1)]
     public int count = 1;
 }
 
 /// <summary>
-/// 一個技能在「抽卡字卡」上的視覺設定。
-/// type = 技能種類; bottleSprite = 對應酒瓶圖 (拖拉設定,留空則只顯示純色底板)。
-/// 顏色沿用 CorpseSkillSystem 上的 colorXxx 欄位 (ColorFor),不在此重複設定。
+/// Visual configuration of a skill on the "draw card" display.
+/// type = skill type; bottleSprite = the corresponding bottle image (assigned by dragging, leave empty to show only a solid-color backplate).
+/// Colors reuse the colorXxx fields on CorpseSkillSystem (ColorFor) and are not configured again here.
 /// </summary>
 [System.Serializable]
 public class SkillCardVisual
 {
-    [Tooltip("技能種類")]
+    [Tooltip("Skill type")]
     public CorpseSkillType type = CorpseSkillType.Normal;
 
-    [Tooltip("這個技能在字卡上顯示的酒瓶圖 (留空則只顯示純色底板)")]
+    [Tooltip("The bottle image shown on the card for this skill (leave empty to show only a solid-color backplate)")]
     public Sprite bottleSprite;
 }
 
 /// <summary>
-/// 技能種類的中文顯示名稱工具。
+/// Display-name helper for skill types (English, to ensure it displays correctly in Web builds).
 /// </summary>
 public static class CorpseSkillNames
 {
@@ -74,15 +74,15 @@ public static class CorpseSkillNames
     {
         switch (type)
         {
-            case CorpseSkillType.Normal: return "普通";
-            case CorpseSkillType.Speed: return "加速";
-            case CorpseSkillType.Bounce: return "彈跳";
-            case CorpseSkillType.HorizontalSway: return "左右橫擺";
-            case CorpseSkillType.VerticalSway: return "上下搖擺";
-            case CorpseSkillType.TeleportDown: return "向下傳送";
-            case CorpseSkillType.RandomLaunch: return "隨機彈射";
-            case CorpseSkillType.BlinkOut: return "消失再現";
-            case CorpseSkillType.LimitedUse: return "限次使用";
+            case CorpseSkillType.Normal: return "Normal";
+            case CorpseSkillType.Speed: return "Speed";
+            case CorpseSkillType.Bounce: return "Bounce";
+            case CorpseSkillType.HorizontalSway: return "Horizontal Sway";
+            case CorpseSkillType.VerticalSway: return "Vertical Sway";
+            case CorpseSkillType.TeleportDown: return "Teleport Down";
+            case CorpseSkillType.RandomLaunch: return "Random Launch";
+            case CorpseSkillType.BlinkOut: return "Blink Out";
+            case CorpseSkillType.LimitedUse: return "Limited Use";
             default: return type.ToString();
         }
     }

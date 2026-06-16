@@ -6,39 +6,39 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// 全域場景載入管理器（Singleton, DontDestroyOnLoad）。
-/// 所有場景切換都經過 LoadingScene，確保一致的載入體驗。
+/// Global scene load manager (Singleton, DontDestroyOnLoad).
+/// All scene transitions go through LoadingScene to ensure a consistent loading experience.
 /// 
-/// Inspector 設定（拖入場景 .unity 檔案即可，名稱自動同步）：
+/// Inspector setup (just drag in the scene .unity file, the name syncs automatically):
 ///   - loadingSceneAsset: LoadingScene.unity
 ///   - mainMenuSceneAsset: MainMenuScene.unity
 /// 
-/// 使用方式：
+/// Usage:
 ///   SceneLoadManager.Instance.LoadSceneWithLoading("GameScene");
 ///   SceneLoadManager.Instance.LoadSceneDirect("MainMenuScene");
 ///   SceneLoadManager.Instance.LoadMainMenu();
 /// 
-/// 注意：關卡 Prefab 的載入由 GameSceneController 處理，不是 SceneLoadManager。
+/// Note: Loading of the level Prefab is handled by GameSceneController, not SceneLoadManager.
 /// </summary>
 public class SceneLoadManager : MonoBehaviour
 {
     public static SceneLoadManager Instance { get; private set; }
 
     /// <summary>
-    /// LoadingScene 讀取此值來決定要載入哪個場景。
+    /// LoadingScene reads this value to decide which scene to load.
     /// </summary>
     public string TargetSceneName { get; private set; }
 
 #if UNITY_EDITOR
-    [Header("場景設定（拖入 .unity 場景檔案，名稱自動同步）")]
-    [Tooltip("Loading 場景")]
+    [Header("Scene setup (drag in the .unity scene file, the name syncs automatically)")]
+    [Tooltip("Loading scene")]
     [SerializeField] private SceneAsset loadingSceneAsset;
 
-    [Tooltip("主選單場景")]
+    [Tooltip("Main menu scene")]
     [SerializeField] private SceneAsset mainMenuSceneAsset;
 #endif
 
-    [Header("場景名稱（由上方 SceneAsset 自動填入）")]
+    [Header("Scene names (auto-filled from the SceneAsset above)")]
     [SerializeField] private string loadingSceneName = "LoadingScene";
     [SerializeField] private string mainMenuSceneName = "MainMenuScene";
 
@@ -66,13 +66,13 @@ public class SceneLoadManager : MonoBehaviour
 #endif
 
     /// <summary>
-    /// 透過 LoadingScene 載入指定場景。
+    /// Load the specified scene through LoadingScene.
     /// </summary>
     public void LoadSceneWithLoading(string sceneName)
     {
         if (string.IsNullOrEmpty(sceneName))
         {
-            Debug.LogWarning("[SceneLoadManager] LoadSceneWithLoading: sceneName 為空！");
+            Debug.LogWarning("[SceneLoadManager] LoadSceneWithLoading: sceneName is empty!");
             return;
         }
 
@@ -82,13 +82,13 @@ public class SceneLoadManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 直接載入指定場景（不經過 LoadingScene）。
+    /// Load the specified scene directly (without going through LoadingScene).
     /// </summary>
     public void LoadSceneDirect(string sceneName)
     {
         if (string.IsNullOrEmpty(sceneName))
         {
-            Debug.LogWarning("[SceneLoadManager] LoadSceneDirect: sceneName 為空！");
+            Debug.LogWarning("[SceneLoadManager] LoadSceneDirect: sceneName is empty!");
             return;
         }
 
@@ -97,7 +97,7 @@ public class SceneLoadManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 重新載入當前活動場景（透過 LoadingScene）。
+    /// Reload the currently active scene (through LoadingScene).
     /// </summary>
     public void ReloadCurrentSceneWithLoading()
     {
@@ -106,7 +106,7 @@ public class SceneLoadManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 返回主選單。
+    /// Return to the main menu.
     /// </summary>
     public void LoadMainMenu()
     {
@@ -116,7 +116,7 @@ public class SceneLoadManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 取得目標場景名稱（LoadingScreenController 使用）。
+    /// Get the target scene name (used by LoadingScreenController).
     /// </summary>
     public string GetTargetSceneName()
     {

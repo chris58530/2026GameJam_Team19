@@ -1,23 +1,23 @@
 using UnityEngine;
 
 /// <summary>
-/// 限次使用屍體 (冰結)。
-/// 屍體平時是可踩的實體平台,但「每次踩上/觸碰」算一次使用。
-/// 用滿 maxUses 次後屍體消失。剩餘次數以透明度提示:
-/// 每用掉一次,Sprite 透明度往下遞減一階,最後一次用完後銷毀。
-/// 玩家離開後再次接觸才會再計一次 (連續貼著不會持續扣)。
+/// Limited-use corpse (frozen).
+/// The corpse is normally a solid platform the player can stand on, but "each time it is stepped on / touched" counts as one use.
+/// After maxUses uses are spent, the corpse disappears. The remaining uses are hinted via transparency:
+/// each use spent drops the sprite's alpha by one step, and it is destroyed after the last use is spent.
+/// A new contact is only counted after the player leaves and touches it again (staying in contact does not keep draining uses).
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class CorpseSkill_LimitedUse : MonoBehaviour
 {
-    [Tooltip("可使用的總次數")]
+    [Tooltip("Total number of available uses")]
     [Min(1)]
     public int maxUses = 3;
 
-    [Tooltip("用滿後的銷毀延遲 (秒,0 = 立即)")]
+    [Tooltip("Destroy delay after uses run out (seconds, 0 = immediate)")]
     public float destroyDelay = 0f;
 
-    [Tooltip("玩家 Tag")]
+    [Tooltip("Player Tag")]
     public string playerTag = "Player";
 
     private SpriteRenderer _sr;
@@ -50,7 +50,7 @@ public class CorpseSkill_LimitedUse : MonoBehaviour
     {
         if (_consumed) return;
         if (other == null || !other.CompareTag(playerTag)) return;
-        if (_playerInContact) return; // 同一次接觸只算一次
+        if (_playerInContact) return; // a single contact only counts once
 
         _playerInContact = true;
         ConsumeOne();
@@ -75,7 +75,7 @@ public class CorpseSkill_LimitedUse : MonoBehaviour
         ApplyAlpha();
     }
 
-    /// <summary>依剩餘次數設定透明度:剩越少越透明 (剩 maxUses = 不透明)。</summary>
+    /// <summary>Sets transparency based on remaining uses: the fewer left, the more transparent (uses left = maxUses means fully opaque).</summary>
     private void ApplyAlpha()
     {
         if (_sr == null) return;

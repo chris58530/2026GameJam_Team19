@@ -2,24 +2,24 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// 消失再現屍體 (Asahi)。
-/// 玩家一碰到這具屍體,延遲 disappearDelay 秒後消失 (關閉碰撞與顯示),
-/// 再過 reappearDelay 秒後重新出現,可再次觸發。
-/// 屍體本身平時仍是可踩的實體平台。
+/// Disappear-and-reappear corpse (Asahi).
+/// As soon as the player touches this corpse, it disappears after a disappearDelay (turning off its collider and renderer),
+/// then reappears after reappearDelay and can be triggered again.
+/// The corpse is otherwise a solid platform the player can stand on.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class CorpseSkill_BlinkOut : MonoBehaviour
 {
-    [Tooltip("碰到後到消失的延遲下限 (秒)")]
+    [Tooltip("Minimum delay from being touched to disappearing (seconds)")]
     public float disappearDelayMin = 0.8f;
 
-    [Tooltip("碰到後到消失的延遲上限 (秒)")]
+    [Tooltip("Maximum delay from being touched to disappearing (seconds)")]
     public float disappearDelayMax = 1.5f;
 
-    [Tooltip("消失後到重新出現的秒數")]
+    [Tooltip("Seconds from disappearing to reappearing")]
     public float reappearDelay = 1f;
 
-    [Tooltip("玩家 Tag")]
+    [Tooltip("Player Tag")]
     public string playerTag = "Player";
 
     private Collider2D _col;

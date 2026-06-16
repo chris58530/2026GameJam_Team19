@@ -1,9 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// 機關的效果類型。
-/// Gate          = 閘門:觸發時滑開 + 關閉碰撞(人可通過)+ 變色;放開則關回擋人。
-/// MovingPlatform = 移動平台/升降台:觸發時移動到目標位置,碰撞一直保留(可站上去);放開則移回。
+/// Effect type of the mechanism.
+/// Gate          = Gate: slides open when triggered + disables collision (passable) + changes color; closes again to block when released.
+/// MovingPlatform = Moving platform/lift: moves to the target position when triggered, collision stays on throughout (can be stood on); moves back when released.
 /// </summary>
 public enum MechanismMode
 {
@@ -11,7 +11,7 @@ public enum MechanismMode
     MovingPlatform
 }
 
-/// <summary>觸發時的移動方向。Custom 時使用 customOffset。</summary>
+/// <summary>Movement direction when triggered. Uses customOffset for Custom.</summary>
 public enum OpenDirection
 {
     Up,
@@ -22,41 +22,41 @@ public enum OpenDirection
 }
 
 /// <summary>
-/// 通用機關:由一組按鈕觸發,依 mode 產生不同效果。可重複套用。
-/// 把要控制它的按鈕拖進 triggers,選好 mode,設定 openOffset(觸發後移動到哪)即可。
+/// Generic mechanism: triggered by a set of buttons, produces different effects depending on mode. Reusable.
+/// Drag the buttons that control it into triggers, pick a mode, and set openOffset (where it moves to after triggering).
 /// </summary>
 [RequireComponent(typeof(SpriteRenderer))]
 public class Mechanism : MonoBehaviour
 {
-    [Header("觸發條件")]
-    [Tooltip("控制這個機關的按鈕 (就是條件陣列)")]
+    [Header("Trigger Conditions")]
+    [Tooltip("The buttons that control this mechanism (i.e. the condition array)")]
     public PressButton[] triggers;
 
-    [Tooltip("true = 全部壓下才觸發;false = 任一壓下就觸發")]
+    [Tooltip("true = trigger only when all are pressed; false = trigger when any one is pressed")]
     public bool requireAll = true;
 
-    [Header("效果類型")]
-    [Tooltip("Gate = 閘門 (開啟可通過);MovingPlatform = 移動平台 (始終可踩)")]
+    [Header("Effect Type")]
+    [Tooltip("Gate = gate (passable when open); MovingPlatform = moving platform (always stand-able)")]
     public MechanismMode mode = MechanismMode.Gate;
 
-    [Header("觸發動作")]
-    [Tooltip("觸發時的移動方向 (Custom 時用下面的自訂位移)")]
+    [Header("Trigger Action")]
+    [Tooltip("Movement direction when triggered (uses the custom offset below for Custom)")]
     public OpenDirection direction = OpenDirection.Up;
 
-    [Tooltip("移動距離 (世界單位)")]
+    [Tooltip("Movement distance (world units)")]
     public float distance = 2.7f;
 
-    [Tooltip("方向選 Custom 時使用的自訂位移")]
+    [Tooltip("Custom offset used when direction is Custom")]
     public Vector2 customOffset = new Vector2(0f, 3f);
 
-    [Tooltip("移動速度")]
+    [Tooltip("Movement speed")]
     public float moveSpeed = 14f;
 
-    [Header("Gate 專用視覺")]
+    [Header("Gate-only Visuals")]
     public Color closedColor = new Color(0.7f, 0.25f, 0.25f);
     public Color openColor = new Color(0.3f, 0.75f, 0.4f);
 
-    /// <summary>機關目前是否被觸發 (開啟)。</summary>
+    /// <summary>Whether the mechanism is currently triggered (open).</summary>
     public bool IsActive { get; private set; }
 
     private Vector3 _closedPos;
@@ -73,7 +73,7 @@ public class Mechanism : MonoBehaviour
         _sr = GetComponent<SpriteRenderer>();
     }
 
-    /// <summary>依方向/距離 (或 Custom) 算出觸發後的位移。</summary>
+    /// <summary>Computes the offset after triggering, based on direction/distance (or Custom).</summary>
     public Vector2 GetOffset()
     {
         switch (direction)
@@ -90,7 +90,7 @@ public class Mechanism : MonoBehaviour
     {
         IsActive = Evaluate();
 
-        // 狀態改變時播放音效
+        // Play a sound effect when the state changes
         if (IsActive && !_prevActive)
         {
             if (SoundManager.Instance != null)
@@ -108,13 +108,13 @@ public class Mechanism : MonoBehaviour
 
         if (mode == MechanismMode.Gate)
         {
-            // 閘門:開啟時可通過 + 變色
+            // Gate: passable when open + changes color
             if (_col != null) _col.enabled = !IsActive;
             if (_sr != null) _sr.color = IsActive ? openColor : closedColor;
         }
         else // MovingPlatform
         {
-            // 移動平台:碰撞一直保留可踩,不變色
+            // Moving platform: collision stays on so it can be stood on, no color change
             if (_col != null) _col.enabled = true;
         }
     }

@@ -1,28 +1,28 @@
 using UnityEngine;
 
 /// <summary>
-/// 向下傳送屍體 (傳送門)。
-/// - 本屍體的 collider 設為 Trigger,玩家經過 (進入範圍) 時觸發。
-/// - 從屍體位置向正下方發射射線,找到第一個「平台」(地面圖層),
-///   把玩家傳送到該平台上方。
-/// - 內建短冷卻,避免落點仍在範圍內造成連續傳送。
+/// Teleport-down corpse (portal).
+/// - This corpse's collider is set to a Trigger and fires when the player passes through (enters the range).
+/// - It casts a ray straight down from the corpse position to find the first "platform" (ground layer),
+///   and teleports the player onto the top of that platform.
+/// - It has a short built-in cooldown to avoid repeated teleports while the landing spot is still inside the range.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class CorpseSkill_TeleportDown : MonoBehaviour
 {
-    [Tooltip("往下偵測平台的圖層 (地面)")]
+    [Tooltip("Layer to detect platforms below (ground)")]
     public LayerMask groundMask = ~0;
 
-    [Tooltip("往下偵測的最大距離")]
+    [Tooltip("Maximum distance to detect downward")]
     public float maxCastDistance = 50f;
 
-    [Tooltip("傳送後玩家相對平台頂端的高度偏移 (約玩家半身高)")]
+    [Tooltip("Height offset of the player relative to the platform top after teleporting (about half the player's height)")]
     public float landingOffset = 0.6f;
 
-    [Tooltip("傳送後的冷卻秒數")]
+    [Tooltip("Cooldown in seconds after teleporting")]
     public float cooldown = 0.5f;
 
-    [Tooltip("玩家 Tag")]
+    [Tooltip("Player Tag")]
     public string playerTag = "Player";
 
     private float _cooldownTimer;
@@ -47,7 +47,7 @@ public class CorpseSkill_TeleportDown : MonoBehaviour
 
         Vector2 origin = transform.position;
 
-        // 從屍體稍微往下一點開始射線,避免打到自己 (即使是 Trigger 也保險)
+        // Start the ray slightly below the corpse to avoid hitting itself (extra safety even though it's a Trigger)
         float skin = 0.05f;
         RaycastHit2D hit = Physics2D.Raycast(
             origin + Vector2.down * skin, Vector2.down, maxCastDistance, groundMask);

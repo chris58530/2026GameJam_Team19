@@ -1,18 +1,19 @@
 using UnityEngine;
 
 /// <summary>
-/// 輕量螢幕震動。疊加在相機跟隨 (CameraFollow2D) 算完的位置「之上」,
-/// 不影響跟隨邏輯、不改 Time.timeScale、相機本身也沒有 Collider,
-/// 因此不會動到任何遊戲邏輯或碰撞。
+/// Lightweight screen shake. It is layered "on top of" the position computed by the camera
+/// follow (CameraFollow2D), so it does not affect the follow logic, does not change
+/// Time.timeScale, and the camera itself has no Collider, so it never touches any game
+/// logic or collisions.
 ///
-/// 不污染跟隨的關鍵作法:
-///   - Update 階段 (一定早於所有 LateUpdate):先把上一幀疊加的偏移「還原」,
-///     讓相機回到乾淨位置。
-///   - CameraFollow2D 在 LateUpdate (order 100) 讀到的是乾淨位置,正常運作。
-///   - 本元件在 LateUpdate (超高 order) 才疊加新的震動偏移。
-/// 如此 CameraFollow2D 永遠讀不到被震動污染的座標。
+/// Key technique for not polluting the follow:
+///   - In the Update phase (always before all LateUpdates): first "revert" the offset
+///     applied last frame so the camera returns to a clean position.
+///   - CameraFollow2D reads the clean position in LateUpdate (order 100) and works normally.
+///   - This component applies the new shake offset in LateUpdate (very high order).
+/// This way CameraFollow2D never reads coordinates polluted by the shake.
 ///
-/// 不需手動掛載:JuiceFX.Shake() 會自動在主相機上建立此元件。
+/// No manual attachment needed: JuiceFX.Shake() automatically creates this component on the main camera.
 /// </summary>
 [DefaultExecutionOrder(10000)]
 public class ScreenShake : MonoBehaviour
@@ -21,18 +22,18 @@ public class ScreenShake : MonoBehaviour
     private float _elapsed;
     private float _strength;
 
-    [Tooltip("震動頻率 (越大抖越快)")]
+    [Tooltip("Shake frequency (higher = faster shaking)")]
     public float frequency = 26f;
 
     private Vector3 _appliedOffset;
     private Vector2 _seed;
 
-    /// <summary>觸發一次震動。較強的震動不會被較弱的覆蓋。</summary>
+    /// <summary>Triggers a shake. A stronger shake will not be overridden by a weaker one.</summary>
     public void Shake(float strength, float duration)
     {
         if (strength <= 0f || duration <= 0f) return;
 
-        // 仍在進行的較強震動不被弱震打斷
+        // A stronger shake still in progress is not interrupted by a weaker one
         if (strength >= _strength || _elapsed >= _duration)
         {
             _strength = strength;
@@ -44,7 +45,7 @@ public class ScreenShake : MonoBehaviour
 
     private void Update()
     {
-        // 在所有 LateUpdate 之前,還原上一幀疊加的偏移 → CameraFollow2D 讀到乾淨位置
+        // Before all LateUpdates, revert the offset applied last frame -> CameraFollow2D reads a clean position
         if (_appliedOffset != Vector3.zero)
         {
             transform.position -= _appliedOffset;
@@ -63,10 +64,10 @@ public class ScreenShake : MonoBehaviour
         _elapsed += Time.unscaledDeltaTime;
 
         float damper = 1f - Mathf.Clamp01(_elapsed / _duration);
-        float amp = _strength * damper * damper; // 平方衰減,尾段更柔順
+        float amp = _strength * damper * damper; // squared falloff, smoother at the tail
 
         float t = Time.unscaledTime * frequency;
-        // PerlinNoise 產生比純亂數更自然的搖晃軌跡
+        // PerlinNoise produces a more natural shake trajectory than pure random
         float ox = (Mathf.PerlinNoise(_seed.x, t) - 0.5f) * 2f;
         float oy = (Mathf.PerlinNoise(_seed.y, t) - 0.5f) * 2f;
 

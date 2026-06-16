@@ -1,14 +1,14 @@
 using UnityEngine;
 
 /// <summary>
-/// 大門:玩家進入時,若已取得鑰匙則通關,否則提示需要鑰匙。
+/// Main door: when the player enters, clears the level if the key has been collected, otherwise prompts that a key is needed.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class DoorExit : MonoBehaviour
 {
     public string playerTag = "Player";
 
-    [Tooltip("玩家到達門口時播放的音效名稱")]
+    [Tooltip("Name of the sound effect played when the player reaches the door")]
     public string arriveSfxName = "Conv-1";
 
     private DeadBodyManager _manager;

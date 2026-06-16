@@ -2,18 +2,18 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 讀取 LoopManager 狀態並更新畫面 HUD (uGUI Text)。
+/// Reads LoopManager state and updates the on-screen HUD (uGUI Text).
 /// </summary>
 public class HUDController : MonoBehaviour
 {
     public LoopManager manager;
 
-    [Header("常駐 HUD")]
+    [Header("Persistent HUD")]
     public Text timeText;
     public Text loopText;
     public Text progressText;
 
-    [Header("通關畫面")]
+    [Header("Clear Screen")]
     public GameObject clearPanel;
     public Text clearLoopsText;
 

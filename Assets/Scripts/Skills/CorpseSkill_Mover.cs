@@ -2,30 +2,30 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 會移動的屍體 (左右橫擺 / 上下搖擺)。
-/// - 使用 Kinematic Rigidbody2D,沿指定軸來回移動。
-/// - 到達設定的單程距離端點時折返;若中途「碰到障礙物」也會提前折返。
-/// - 會帶著站在上方的玩家一起移動 (與 MovingPlatform 同邏輯)。
-/// 移動範圍固定,於套用技能時設定,之後不再變動。
+/// A corpse that moves (horizontal sway / vertical sway).
+/// - Uses a Kinematic Rigidbody2D and moves back and forth along the given axis.
+/// - Reverses when it reaches the configured one-way distance endpoint; it also reverses early if it "hits an obstacle" along the way.
+/// - Carries the player standing on top along with it (same logic as MovingPlatform).
+/// The movement range is fixed: it is set when the skill is applied and never changes afterwards.
 /// </summary>
 [RequireComponent(typeof(BoxCollider2D))]
 public class CorpseSkill_Mover : MonoBehaviour
 {
     public enum MoveAxis { Horizontal, Vertical }
 
-    [Tooltip("移動軸向")]
+    [Tooltip("Movement axis")]
     public MoveAxis axis = MoveAxis.Horizontal;
 
-    [Tooltip("單程移動距離 (世界單位)")]
+    [Tooltip("One-way movement distance (world units)")]
     public float distance = 3f;
 
-    [Tooltip("移動速度 (單位 / 秒)")]
+    [Tooltip("Movement speed (units / second)")]
     public float speed = 2f;
 
-    [Tooltip("哪些圖層算障礙物 (碰到會提前折返)")]
+    [Tooltip("Which layers count as obstacles (hitting one reverses early)")]
     public LayerMask obstacleMask = ~0;
 
-    [Tooltip("帶動乘客用的玩家 Tag")]
+    [Tooltip("Player Tag used for carrying riders")]
     public string playerTag = "Player";
 
     private Rigidbody2D _rb;
@@ -37,7 +37,7 @@ public class CorpseSkill_Mover : MonoBehaviour
     private readonly List<RaycastHit2D> _castHits = new List<RaycastHit2D>();
     private ContactFilter2D _filter;
 
-    /// <summary>由管理器在生成屍體後呼叫,設定移動參數。</summary>
+    /// <summary>Called by the manager after spawning the corpse to set the movement parameters.</summary>
     public void Configure(MoveAxis moveAxis, float moveDistance, float moveSpeed, LayerMask obstacles)
     {
         axis = moveAxis;
@@ -76,7 +76,7 @@ public class CorpseSkill_Mover : MonoBehaviour
         float step = speed * Time.fixedDeltaTime;
         Vector2 moveVec = _dir * (_sign * step);
 
-        // 障礙物偵測:沿移動方向投射自身 collider,碰到就提前折返 (本幀不移動)
+        // Obstacle detection: cast our own collider along the movement direction; reverse early if it hits something (no movement this frame)
         int count = _col.Cast(_dir * _sign, _filter, _castHits, step + 0.02f);
         if (count > 0)
         {
@@ -86,7 +86,7 @@ public class CorpseSkill_Mover : MonoBehaviour
 
         Vector2 target = _rb.position + moveVec;
 
-        // 端點折返:超過單程距離就夾住並反向
+        // Endpoint reversal: if it exceeds the one-way distance, clamp and reverse
         float traveled = Vector2.Dot(target - _startPos, _dir);
         if (traveled > distance)
         {
@@ -107,7 +107,7 @@ public class CorpseSkill_Mover : MonoBehaviour
         }
     }
 
-    /// <summary>帶著站在上方的玩家一起移動。</summary>
+    /// <summary>Carries the player standing on top along with the platform.</summary>
     private void CarryRiders(Vector2 delta)
     {
         Bounds b = _col.bounds;

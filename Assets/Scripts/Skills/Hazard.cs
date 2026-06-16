@@ -1,15 +1,15 @@
 using UnityEngine;
 
 /// <summary>
-/// 傷害區域 (尖刺 / 岩漿 等)。
-/// 玩家碰到時,視為「非自身機制導致的死亡」→ 透過 ILevelFailHandler 通知管理器,
-/// 宣告關卡失敗並重來。掛在帶有 Trigger Collider2D 的物件上。
-/// 不直接依賴任何特定管理器。
+/// Damage area (spikes / lava, etc.).
+/// When the player touches it, this is treated as "death not caused by the player's own mechanics" -> it notifies the manager through ILevelFailHandler,
+/// declaring the level failed and restarting. Attach it to an object with a Trigger Collider2D.
+/// It does not depend directly on any specific manager.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class Hazard : MonoBehaviour
 {
-    [Tooltip("玩家 Tag")]
+    [Tooltip("Player Tag")]
     public string playerTag = "Player";
 
     private ILevelFailHandler _handler;
@@ -33,6 +33,6 @@ public class Hazard : MonoBehaviour
     {
         if (!other.CompareTag(playerTag)) return;
         if (_handler == null) _handler = FindFailHandler();
-        _handler?.FailLevel("踏入傷害區域");
+        _handler?.FailLevel("Stepped into hazard");
     }
 }

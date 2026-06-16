@@ -387,7 +387,7 @@ public class LoopManager : MonoBehaviour, ILevelFailHandler
             };
             sub.normal.textColor = Color.white;
             GUI.Label(new Rect(0, Screen.height * 0.50f, Screen.width, 40),
-                _failReason + "   重新開始...", sub);
+                _failReason + "   Restarting...", sub);
         }
     }
 }

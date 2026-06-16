@@ -5,42 +5,42 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// 遊戲流程管理器（Singleton, DontDestroyOnLoad）。
-/// 儲存當前選擇的關卡與執行時上下文，提供全域場景切換方法。
+/// Game flow manager (Singleton, DontDestroyOnLoad).
+/// Stores the currently selected level and runtime context, and provides global scene transition methods.
 /// 
-/// Inspector 設定（拖入 .unity 場景檔案即可，名稱自動同步）：
+/// Inspector setup (just drag in the .unity scene file, the name syncs automatically):
 ///   - mainMenuSceneAsset: MainMenuScene.unity
 ///   - levelSelectorSceneAsset: LevelSelectorScene.unity
 ///   - gameSceneAsset: GameScene.unity
 /// 
-/// 設定方式：
-///   1. 在 MainMenuScene 中建立空 GameObject，命名為 "GameFlowManager"
-///   2. 掛上此腳本
-///   3. 在 Inspector 中拖入三個場景檔案
+/// Setup:
+///   1. Create an empty GameObject in MainMenuScene, name it "GameFlowManager"
+///   2. Attach this script
+///   3. Drag the three scene files into the Inspector
 /// </summary>
 public class GameFlowManager : MonoBehaviour
 {
     public static GameFlowManager Instance { get; private set; }
 
-    /// <summary>當前選擇的關卡定義。</summary>
+    /// <summary>The currently selected level definition.</summary>
     public LevelDefinition CurrentLevelDefinition { get; private set; }
 
-    /// <summary>當前的關卡執行時上下文。</summary>
+    /// <summary>The current level runtime context.</summary>
     public LevelRunContext CurrentContext { get; private set; }
 
 #if UNITY_EDITOR
-    [Header("場景設定（拖入 .unity 場景檔案，名稱自動同步）")]
-    [Tooltip("主選單場景")]
+    [Header("Scene setup (drag in the .unity scene file, the name syncs automatically)")]
+    [Tooltip("Main menu scene")]
     [SerializeField] private SceneAsset mainMenuSceneAsset;
 
-    [Tooltip("關卡選擇場景")]
+    [Tooltip("Level selection scene")]
     [SerializeField] private SceneAsset levelSelectorSceneAsset;
 
-    [Tooltip("遊戲場景（shell）")]
+    [Tooltip("Game scene (shell)")]
     [SerializeField] private SceneAsset gameSceneAsset;
 #endif
 
-    [Header("場景名稱（由上方 SceneAsset 自動填入）")]
+    [Header("Scene names (auto-filled from the SceneAsset above)")]
     [SerializeField] private string mainMenuSceneName = "MainMenuScene";
     [SerializeField] private string levelSelectorSceneName = "LevelSelectorScene";
     [SerializeField] private string gameSceneName = "GameScene";
@@ -72,7 +72,7 @@ public class GameFlowManager : MonoBehaviour
 #endif
 
     /// <summary>
-    /// 返回主選單。
+    /// Return to the main menu.
     /// </summary>
     public void GoToMainMenu()
     {
@@ -85,12 +85,12 @@ public class GameFlowManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[GameFlowManager] SceneLoadManager 不存在！");
+            Debug.LogError("[GameFlowManager] SceneLoadManager does not exist!");
         }
     }
 
     /// <summary>
-    /// 前往關卡選擇畫面。
+    /// Go to the level selection screen.
     /// </summary>
     public void GoToLevelSelector()
     {
@@ -103,24 +103,24 @@ public class GameFlowManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[GameFlowManager] SceneLoadManager 不存在！");
+            Debug.LogError("[GameFlowManager] SceneLoadManager does not exist!");
         }
     }
 
     /// <summary>
-    /// 開始指定關卡。由 LevelSelectorController 呼叫。
+    /// Start the specified level. Called by LevelSelectorController.
     /// </summary>
     public void StartLevel(LevelDefinition levelDefinition, LevelRunContext context)
     {
         if (levelDefinition == null)
         {
-            Debug.LogError("[GameFlowManager] StartLevel: levelDefinition 為 null！");
+            Debug.LogError("[GameFlowManager] StartLevel: levelDefinition is null!");
             return;
         }
 
         if (levelDefinition.levelPrefab == null)
         {
-            Debug.LogError($"[GameFlowManager] StartLevel: {levelDefinition.levelId} 的 levelPrefab 為 null！");
+            Debug.LogError($"[GameFlowManager] StartLevel: levelPrefab of {levelDefinition.levelId} is null!");
             return;
         }
 
@@ -133,18 +133,18 @@ public class GameFlowManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[GameFlowManager] SceneLoadManager 不存在！");
+            Debug.LogError("[GameFlowManager] SceneLoadManager does not exist!");
         }
     }
 
     /// <summary>
-    /// 重試當前關卡。保持相同的 LevelDefinition 和 Context。
+    /// Retry the current level. Keeps the same LevelDefinition and Context.
     /// </summary>
     public void RetryCurrentLevel()
     {
         if (CurrentLevelDefinition == null)
         {
-            Debug.LogWarning("[GameFlowManager] RetryCurrentLevel: 沒有當前關卡，返回選關畫面。");
+            Debug.LogWarning("[GameFlowManager] RetryCurrentLevel: no current level, returning to the level selector.");
             GoToLevelSelector();
             return;
         }
@@ -162,12 +162,12 @@ public class GameFlowManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[GameFlowManager] SceneLoadManager 不存在！");
+            Debug.LogError("[GameFlowManager] SceneLoadManager does not exist!");
         }
     }
 
     /// <summary>
-    /// 清除當前關卡資料。
+    /// Clear the current level data.
     /// </summary>
     public void ClearCurrentLevelData()
     {

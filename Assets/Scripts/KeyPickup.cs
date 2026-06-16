@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 鑰匙:玩家碰到時收集,並關閉自身。
+/// Key: collected when the player touches it, then disables itself.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class KeyPickup : MonoBehaviour

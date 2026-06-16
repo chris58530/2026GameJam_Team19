@@ -1,27 +1,27 @@
 using UnityEngine;
 
 /// <summary>
-/// 結局動畫控制器（備用）。
-/// 如果你不用 VideoPlayer 而是用 Unity Animator 做結局動畫，
-/// 可以在動畫最後一帧加 Animation Event 呼叫 OnEndingAnimationFinished()。
+/// Ending animation controller (optional/backup).
+/// If you do not use VideoPlayer but instead build the ending animation with the Unity Animator,
+/// you can add an Animation Event on the last frame to call OnEndingAnimationFinished().
 /// 
-/// 目前 EndingUI 已內建 VideoPlayer 支援，影片播完會自動顯示按鈕。
-/// 此腳本只在你使用 Animator（非 VideoPlayer）做結局動畫時才需要。
+/// Currently EndingUI has built-in VideoPlayer support; the buttons are shown automatically when the video finishes.
+/// This script is only needed when you build the ending animation with the Animator (not VideoPlayer).
 /// </summary>
 public class EndingAnimationController : MonoBehaviour
 {
     private bool hasFinished = false;
 
     /// <summary>
-    /// 結局動畫播放完畢後呼叫此方法。
-    /// 連接方式：Animation Event 在最後一帧呼叫此函式。
+    /// Call this method after the ending animation finishes playing.
+    /// How to connect: an Animation Event on the last frame calls this function.
     /// </summary>
     public void OnEndingAnimationFinished()
     {
         if (hasFinished) return;
         hasFinished = true;
 
-        Debug.Log("[EndingAnimationController] 結局動畫結束，顯示按鈕。");
+        Debug.Log("[EndingAnimationController] Ending animation finished, showing buttons.");
 
         if (EndingUI.Instance != null)
         {
@@ -29,7 +29,7 @@ public class EndingAnimationController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[EndingAnimationController] EndingUI.Instance 不存在！");
+            Debug.LogWarning("[EndingAnimationController] EndingUI.Instance does not exist!");
         }
     }
 }

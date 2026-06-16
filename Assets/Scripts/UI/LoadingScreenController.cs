@@ -5,34 +5,34 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// 掛在 LoadingScene 中的控制器。
-/// 讀取 SceneLoadManager.TargetSceneName，非同步載入目標場景。
+/// Controller attached to LoadingScene.
+/// Reads SceneLoadManager.TargetSceneName and asynchronously loads the target scene.
 /// 
-/// 注意：
-///   - LoadingScene 只負責載入「場景」（MainMenuScene, LevelSelectorScene, GameScene）
-///   - 關卡 Prefab 的實例化由 GameSceneController 在 GameScene 載入後處理
+/// Note:
+///   - LoadingScene is only responsible for loading "scenes" (MainMenuScene, LevelSelectorScene, GameScene)
+///   - Instantiation of the level Prefab is handled by GameSceneController after GameScene loads
 /// 
-/// Inspector 設定：
-///   - progressBar: UI Slider（顯示進度）
-///   - loadingText: TMP_Text（顯示 "Loading..." 或百分比）
+/// Inspector setup:
+///   - progressBar: UI Slider (shows progress)
+///   - loadingText: TMP_Text (shows "Loading..." or a percentage)
 /// </summary>
 public class LoadingScreenController : MonoBehaviour
 {
-    [Header("UI 元件（在 Inspector 中連接）")]
-    [Tooltip("進度條 Slider")]
+    [Header("UI components (connect in the Inspector)")]
+    [Tooltip("Progress bar Slider")]
     [SerializeField] private Slider progressBar;
 
-    [Tooltip("載入文字（TMP）")]
+    [Tooltip("Loading text (TMP)")]
     [SerializeField] private TMP_Text loadingText;
 
-    [Header("設定")]
-    [Tooltip("是否顯示百分比數字")]
+    [Header("Settings")]
+    [Tooltip("Whether to show the percentage number")]
     [SerializeField] private bool showPercentage = true;
 
-    [Tooltip("最短顯示時間（秒），避免 Loading 畫面一閃而過")]
+    [Tooltip("Minimum display time (seconds), to avoid the loading screen flashing by")]
     [SerializeField] private float minimumLoadTime = 0.5f;
 
-    [Tooltip("如果目標場景為空，回退到此場景")]
+    [Tooltip("If the target scene is empty, fall back to this scene")]
     [SerializeField] private string fallbackSceneName = "MainMenuScene";
 
     private void Start()
@@ -42,7 +42,7 @@ public class LoadingScreenController : MonoBehaviour
 
     private IEnumerator LoadTargetSceneAsync()
     {
-        // 取得目標場景名稱
+        // Get the target scene name
         string targetScene = null;
 
         if (SceneLoadManager.Instance != null)
@@ -52,19 +52,19 @@ public class LoadingScreenController : MonoBehaviour
 
         if (string.IsNullOrEmpty(targetScene))
         {
-            Debug.LogWarning("[LoadingScreenController] 沒有設定目標場景，回退到：" + fallbackSceneName);
+            Debug.LogWarning("[LoadingScreenController] No target scene set, falling back to: " + fallbackSceneName);
             targetScene = fallbackSceneName;
         }
 
-        // 記錄開始時間
+        // Record the start time
         float startTime = Time.realtimeSinceStartup;
 
-        // 開始非同步載入
+        // Begin asynchronous loading
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(targetScene);
 
         if (asyncLoad == null)
         {
-            Debug.LogError("[LoadingScreenController] 無法載入場景：" + targetScene + "，請確認已加入 Build Settings！");
+            Debug.LogError("[LoadingScreenController] Cannot load scene: " + targetScene + ", please make sure it is added to Build Settings!");
             yield break;
         }
 
@@ -72,16 +72,16 @@ public class LoadingScreenController : MonoBehaviour
 
         while (!asyncLoad.isDone)
         {
-            // Unity 的 progress 在 allowSceneActivation=false 時最高到 0.9
+            // Unity's progress caps at 0.9 when allowSceneActivation=false
             float progress = Mathf.Clamp01(asyncLoad.progress / 0.9f);
 
-            // 更新進度條
+            // Update the progress bar
             if (progressBar != null)
             {
                 progressBar.value = progress;
             }
 
-            // 更新文字
+            // Update the text
             if (loadingText != null)
             {
                 if (showPercentage)
@@ -90,7 +90,7 @@ public class LoadingScreenController : MonoBehaviour
                     loadingText.text = "Loading...";
             }
 
-            // 載入完成，確保最短顯示時間
+            // Loading complete; ensure the minimum display time
             if (asyncLoad.progress >= 0.9f)
             {
                 float elapsed = Time.realtimeSinceStartup - startTime;

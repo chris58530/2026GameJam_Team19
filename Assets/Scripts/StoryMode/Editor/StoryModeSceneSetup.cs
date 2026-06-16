@@ -8,28 +8,28 @@ using System.Collections.Generic;
 using System.IO;
 
 /// <summary>
-/// 一鍵建立 Story Mode 所需的所有場景，並正確掛上腳本與元件。
+/// One-click creation of all scenes needed for Story Mode, with scripts and components attached correctly.
 /// 
-/// 使用方式：
-///   Unity 選單 → Tools → Story Mode → Setup All Scenes
+/// Usage:
+///   Unity menu -> Tools -> Story Mode -> Setup All Scenes
 /// 
-/// 此工具會：
-///   1. 建立 TitleMenu 場景（含 Canvas、Animator、Start 按鈕、StoryFlowManager）
-///   2. 建立 OpeningAnimation 場景（含 Canvas、Animator、OpeningAnimationController）
-///   3. 建立 Ending 場景（含 Canvas、Animator、EndingUI、按鈕面板）
-///   4. 在 Game0/Game1/Game2 中加入 LevelManager（如果還沒有）
-///   5. 將所有場景加入 Build Settings
+/// This tool will:
+///   1. Create the TitleMenu scene (with Canvas, Animator, Start button, StoryFlowManager)
+///   2. Create the OpeningAnimation scene (with Canvas, Animator, OpeningAnimationController)
+///   3. Create the Ending scene (with Canvas, Animator, EndingUI, buttons panel)
+///   4. Add a LevelManager to Game0/Game1/Game2 (if not already present)
+///   5. Add all scenes to Build Settings
 /// 
-/// 注意：如果場景已存在，不會覆蓋，只會跳過。
+/// Note: if a scene already exists, it will not be overwritten; it will just be skipped.
 /// </summary>
 public static class StoryModeSceneSetup
 {
     private const string ScenesFolder = "Assets/Scenes";
 
-    [MenuItem("Tools/Story Mode/Setup All Scenes (一鍵建立全部)", priority = 0)]
+    [MenuItem("Tools/Story Mode/Setup All Scenes (create everything in one click)", priority = 0)]
     public static void SetupAllScenes()
     {
-        // 先儲存當前場景
+        // Save the current scene first
         EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
 
         bool created = false;
@@ -42,7 +42,7 @@ public static class StoryModeSceneSetup
         }
         else
         {
-            Debug.Log("[StoryModeSetup] TitleMenu 場景已存在，跳過。");
+            Debug.Log("[StoryModeSetup] TitleMenu scene already exists, skipping.");
         }
 
         // 2. OpeningAnimation
@@ -53,7 +53,7 @@ public static class StoryModeSceneSetup
         }
         else
         {
-            Debug.Log("[StoryModeSetup] OpeningAnimation 場景已存在，跳過。");
+            Debug.Log("[StoryModeSetup] OpeningAnimation scene already exists, skipping.");
         }
 
         // 3. Ending
@@ -64,21 +64,21 @@ public static class StoryModeSceneSetup
         }
         else
         {
-            Debug.Log("[StoryModeSetup] Ending 場景已存在，跳過。");
+            Debug.Log("[StoryModeSetup] Ending scene already exists, skipping.");
         }
 
-        // 4. 在 Game0/1/2 加入 LevelManager
+        // 4. Add LevelManager to Game0/1/2
         AddLevelManagerToExistingScenes();
 
-        // 5. 更新 Build Settings
+        // 5. Update Build Settings
         UpdateBuildSettings();
 
         AssetDatabase.Refresh();
 
         if (created)
-            Debug.Log("[StoryModeSetup] ✓ 場景建立完成！請回到 Unity Editor 確認。");
+            Debug.Log("[StoryModeSetup] ✓ Scene creation complete! Please go back to the Unity Editor to verify.");
         else
-            Debug.Log("[StoryModeSetup] ✓ 所有場景已存在，已確認 Build Settings 和 LevelManager。");
+            Debug.Log("[StoryModeSetup] ✓ All scenes already exist; Build Settings and LevelManager have been verified.");
     }
 
     [MenuItem("Tools/Story Mode/1. Create TitleMenu Scene")]
@@ -86,7 +86,7 @@ public static class StoryModeSceneSetup
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
-        // StoryFlowManager（DontDestroyOnLoad）
+        // StoryFlowManager (DontDestroyOnLoad)
         var flowMgr = new GameObject("StoryFlowManager");
         var sfm = flowMgr.AddComponent<StoryFlowManager>();
         var serializedObj = new SerializedObject(sfm);
@@ -102,13 +102,13 @@ public static class StoryModeSceneSetup
         serializedObj.FindProperty("endingScene").stringValue = "Ending";
         serializedObj.ApplyModifiedProperties();
 
-        // 背景影片播放器
+        // Background video player
         var bgVideoObj = new GameObject("BackgroundVideoPlayer");
         var bgVideoPlayer = bgVideoObj.AddComponent<UnityEngine.Video.VideoPlayer>();
         bgVideoPlayer.playOnAwake = false;
         bgVideoPlayer.isLooping = true;
         bgVideoPlayer.renderMode = UnityEngine.Video.VideoRenderMode.CameraFarPlane;
-        // Target Camera 需要手動拖入 Main Camera
+        // Target Camera must be assigned manually to the Main Camera
 
         // Canvas
         var canvasObj = CreateCanvas("TitleCanvas");
@@ -116,11 +116,11 @@ public static class StoryModeSceneSetup
         // TitleMenuUI
         var titleUI = canvasObj.AddComponent<TitleMenuUI>();
 
-        // Start 按鈕
+        // Start button
         var startBtn = CreateButton(canvasObj.transform, "StartButton", "START", 
             new Vector2(0.5f, 0.3f), new Vector2(0.5f, 0.3f), new Vector2(300, 80));
 
-        // 連接
+        // Wire up
         var serializedUI = new SerializedObject(titleUI);
         serializedUI.FindProperty("startButton").objectReferenceValue = startBtn.GetComponent<Button>();
         serializedUI.FindProperty("backgroundVideo").objectReferenceValue = bgVideoPlayer;
@@ -129,12 +129,12 @@ public static class StoryModeSceneSetup
         // EventSystem
         CreateEventSystem();
 
-        // 儲存場景
+        // Save the scene
         string path = $"{ScenesFolder}/TitleMenu.unity";
         EnsureDirectoryExists(path);
         EditorSceneManager.SaveScene(scene, path);
-        Debug.Log($"[StoryModeSetup] ✓ 已建立 TitleMenu 場景: {path}");
-        Debug.Log("[StoryModeSetup] → 記得在 BackgroundVideoPlayer 的 Inspector 中：拖入影片 Clip + 設定 Target Camera = Main Camera");
+        Debug.Log($"[StoryModeSetup] ✓ Created TitleMenu scene: {path}");
+        Debug.Log("[StoryModeSetup] -> Remember in the BackgroundVideoPlayer Inspector: drag in the video Clip + set Target Camera = Main Camera");
     }
 
     [MenuItem("Tools/Story Mode/2. Create OpeningAnimation Scene")]
@@ -142,37 +142,37 @@ public static class StoryModeSceneSetup
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
-        // OpeningAnimationPlayer（掛 Controller + VideoPlayer）
+        // OpeningAnimationPlayer (attaches Controller + VideoPlayer)
         var playerObj = new GameObject("OpeningAnimationPlayer");
         var controller = playerObj.AddComponent<OpeningAnimationController>();
         var videoPlayer = playerObj.GetComponent<UnityEngine.Video.VideoPlayer>();
-        // VideoPlayer 由 [RequireComponent] 自動加上
+        // VideoPlayer is added automatically by [RequireComponent]
         videoPlayer.playOnAwake = false;
         videoPlayer.isLooping = false;
         videoPlayer.renderMode = UnityEngine.Video.VideoRenderMode.CameraFarPlane;
-        // Target Camera 需手動設定 Main Camera
+        // Target Camera must be set manually to the Main Camera
 
-        // 設定預設值
+        // Set default values
         var serializedCtrl = new SerializedObject(controller);
         serializedCtrl.FindProperty("allowSkip").boolValue = true;
         serializedCtrl.FindProperty("skipMinWait").floatValue = 1f;
         serializedCtrl.FindProperty("fallbackDuration").floatValue = 3f;
         serializedCtrl.ApplyModifiedProperties();
 
-        // Canvas（顯示影片用的 RawImage + 跳過提示）
+        // Canvas (RawImage for displaying the video + skip hint)
         var canvasObj = CreateCanvas("UICanvas");
 
-        // 全螢幕 RawImage（用來顯示影片）
+        // Full-screen RawImage (used to display the video)
         var rawImageObj = CreateFullScreenPanel(canvasObj.transform, "VideoDisplay");
         var rawImage = rawImageObj.AddComponent<RawImage>();
         rawImage.color = Color.white;
 
-        // 連接 RawImage 到 Controller
+        // Wire the RawImage to the Controller
         var serializedCtrl2 = new SerializedObject(controller);
         serializedCtrl2.FindProperty("displayRawImage").objectReferenceValue = rawImage;
         serializedCtrl2.ApplyModifiedProperties();
 
-        // 跳過提示文字
+        // Skip hint text
         var skipText = CreateTextObject(canvasObj.transform, "SkipHintText",
             "Press any key to skip...",
             new Vector2(0.5f, 0.05f), new Vector2(0.5f, 0.05f), new Vector2(400, 40));
@@ -180,12 +180,12 @@ public static class StoryModeSceneSetup
         // EventSystem
         CreateEventSystem();
 
-        // 儲存
+        // Save
         string path = $"{ScenesFolder}/OpeningAnimation.unity";
         EnsureDirectoryExists(path);
         EditorSceneManager.SaveScene(scene, path);
-        Debug.Log($"[StoryModeSetup] ✓ 已建立 OpeningAnimation 場景: {path}");
-        Debug.Log("[StoryModeSetup] → 記得在 OpeningAnimationPlayer 的 Inspector 中：拖入影片 Clip + 設定 Target Camera = Main Camera");
+        Debug.Log($"[StoryModeSetup] ✓ Created OpeningAnimation scene: {path}");
+        Debug.Log("[StoryModeSetup] -> Remember in the OpeningAnimationPlayer Inspector: drag in the video Clip + set Target Camera = Main Camera");
     }
 
     [MenuItem("Tools/Story Mode/3. Create Ending Scene")]
@@ -193,7 +193,7 @@ public static class StoryModeSceneSetup
     {
         var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
-        // Victory 影片播放器
+        // Victory video player
         var victoryVideoObj = new GameObject("VictoryVideoPlayer");
         var victoryVP = victoryVideoObj.AddComponent<UnityEngine.Video.VideoPlayer>();
         victoryVP.playOnAwake = false;
@@ -201,7 +201,7 @@ public static class StoryModeSceneSetup
         victoryVP.renderMode = UnityEngine.Video.VideoRenderMode.CameraFarPlane;
         victoryVideoObj.SetActive(false);
 
-        // Fail 影片播放器
+        // Fail video player
         var failVideoObj = new GameObject("FailVideoPlayer");
         var failVP = failVideoObj.AddComponent<UnityEngine.Video.VideoPlayer>();
         failVP.playOnAwake = false;
@@ -234,7 +234,7 @@ public static class StoryModeSceneSetup
         vlg.childForceExpandWidth = false;
         buttonsPanel.SetActive(false);
 
-        // 按鈕
+        // Buttons
         var retryBtn = CreateButton(buttonsPanel.transform, "RetryButton", "RETRY", 
             Vector2.zero, Vector2.zero, new Vector2(280, 60));
         var backBtn = CreateButton(buttonsPanel.transform, "BackToTitleButton", "BACK TO TITLE",
@@ -242,7 +242,7 @@ public static class StoryModeSceneSetup
         var quitBtn = CreateButton(buttonsPanel.transform, "QuitButton", "QUIT",
             Vector2.zero, Vector2.zero, new Vector2(280, 60));
 
-        // 連接 EndingUI
+        // Wire up EndingUI
         var serializedEndingUI = new SerializedObject(endingUI);
         serializedEndingUI.FindProperty("victoryVideoPlayer").objectReferenceValue = victoryVP;
         serializedEndingUI.FindProperty("failVideoPlayer").objectReferenceValue = failVP;
@@ -256,12 +256,12 @@ public static class StoryModeSceneSetup
         // EventSystem
         CreateEventSystem();
 
-        // 儲存
+        // Save
         string path = $"{ScenesFolder}/Ending.unity";
         EnsureDirectoryExists(path);
         EditorSceneManager.SaveScene(scene, path);
-        Debug.Log($"[StoryModeSetup] ✓ 已建立 Ending 場景: {path}");
-        Debug.Log("[StoryModeSetup] → 記得在 VictoryVideoPlayer / FailVideoPlayer 的 Inspector 中：拖入影片 Clip + 設定 Target Camera = Main Camera");
+        Debug.Log($"[StoryModeSetup] ✓ Created Ending scene: {path}");
+        Debug.Log("[StoryModeSetup] -> Remember in the VictoryVideoPlayer / FailVideoPlayer Inspector: drag in the video Clip + set Target Camera = Main Camera");
     }
 
     [MenuItem("Tools/Story Mode/4. Add LevelManager to Game0-1-2")]
@@ -275,32 +275,32 @@ public static class StoryModeSceneSetup
 
             if (!File.Exists(scenePath))
             {
-                Debug.LogWarning($"[StoryModeSetup] 找不到場景: {scenePath}，跳過。");
+                Debug.LogWarning($"[StoryModeSetup] Scene not found: {scenePath}, skipping.");
                 continue;
             }
 
             var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
 
-            // 檢查是否已有 LevelManager
+            // Check whether a LevelManager already exists
             var existing = Object.FindFirstObjectByType<LevelManager>();
             if (existing != null)
             {
-                Debug.Log($"[StoryModeSetup] {sceneName} 已有 LevelManager，跳過。");
+                Debug.Log($"[StoryModeSetup] {sceneName} already has a LevelManager, skipping.");
                 continue;
             }
 
-            // 建立 LevelManager
+            // Create the LevelManager
             var lmObj = new GameObject("LevelManager");
             var lm = lmObj.AddComponent<LevelManager>();
 
-            // 設定延遲
+            // Set delays
             var serializedLM = new SerializedObject(lm);
             serializedLM.FindProperty("clearDelay").floatValue = 2.5f;
             serializedLM.FindProperty("failDelay").floatValue = 2f;
             serializedLM.ApplyModifiedProperties();
 
             EditorSceneManager.SaveScene(scene);
-            Debug.Log($"[StoryModeSetup] ✓ 已在 {sceneName} 中加入 LevelManager。");
+            Debug.Log($"[StoryModeSetup] ✓ Added LevelManager to {sceneName}.");
         }
     }
 
@@ -308,7 +308,7 @@ public static class StoryModeSceneSetup
     {
         string[] requiredScenes = {
             "TitleMenu", "OpeningAnimation", "Game0", "Game1", "Game2", "Ending",
-            "LoadingScene" // 保留 Loading 場景支持
+            "LoadingScene" // keep the Loading scene supported
         };
 
         List<EditorBuildSettingsScene> scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
@@ -331,11 +331,11 @@ public static class StoryModeSceneSetup
         if (addedCount > 0)
         {
             EditorBuildSettings.scenes = scenes.ToArray();
-            Debug.Log($"[StoryModeSetup] ✓ 已新增 {addedCount} 個場景到 Build Settings。");
+            Debug.Log($"[StoryModeSetup] ✓ Added {addedCount} scene(s) to Build Settings.");
         }
         else
         {
-            Debug.Log("[StoryModeSetup] Build Settings 已包含所有需要的場景。");
+            Debug.Log("[StoryModeSetup] Build Settings already contains all required scenes.");
         }
     }
 
@@ -405,7 +405,7 @@ public static class StoryModeSceneSetup
         var button = btnObj.AddComponent<Button>();
         button.targetGraphic = image;
 
-        // 按鈕文字
+        // Button text
         var textObj = new GameObject("Text");
         textObj.layer = LayerMask.NameToLayer("UI");
         textObj.transform.SetParent(btnObj.transform, false);

@@ -19,7 +19,7 @@ public class PlayerMovement : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         capsuleCollider = GetComponent<CapsuleCollider>();
 
-        // 啟用重力，鎖定 Z 軸移動和 X/Y 旋轉（2D 風格）
+        // Enable gravity, lock Z-axis movement and X/Y rotation (2D style)
         rb.useGravity = true;
         rb.freezeRotation = true;
         rb.constraints = RigidbodyConstraints.FreezePositionZ
@@ -30,16 +30,16 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        // 地面偵測
+        // Ground check
         CheckGrounded();
 
-        // 水平移動
+        // Horizontal movement
         float moveX = Input.GetAxis("Horizontal");
         Vector3 velocity = rb.linearVelocity;
         velocity.x = moveX * moveSpeed;
         rb.linearVelocity = velocity;
 
-        // 跳躍
+        // Jump
         if (Input.GetButtonDown("Jump") && isGrounded)
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, 0f);
@@ -48,7 +48,7 @@ public class PlayerMovement : MonoBehaviour
 
     void CheckGrounded()
     {
-        // 從膠囊體底部發射射線檢測地面
+        // Cast a ray from the bottom of the capsule to detect the ground
         float radius = capsuleCollider.radius;
         Vector3 origin = transform.position + Vector3.down * (capsuleCollider.height / 2f - radius);
 

@@ -3,23 +3,23 @@ using UnityEngine.UI;
 using DG.Tweening;
 
 /// <summary>
-/// 純程式的「回饋感」工具箱:粒子爆發、縮放彈性 (squash &amp; stretch)、螢幕震動。
+/// A pure-code "game feel" toolbox: particle bursts, squash &amp; stretch scaling, and screen shake.
 ///
-/// 設計重點 (符合「不影響邏輯、不碰 Collider」):
-///   - 粒子一律是獨立、無 Collider 的暫時物件,播完自動銷毀。
-///   - 不需要任何美術素材:貼圖由程式畫出柔邊圓點,材質用內建 Sprites/Default。
-///   - 縮放只作用在呼叫端指定的「視覺 Transform」(例如玩家的 Visual 子物件),
-///     不會動到掛在別處的 Collider。
-///   - 震動透過 ScreenShake,只疊加相機顯示位置,不改 Time.timeScale。
+/// Design priorities (consistent with "don't affect logic, don't touch Colliders"):
+///   - Particles are always independent, Collider-less temporary objects that auto-destroy when done.
+///   - No art assets required: textures are drawn in code as soft-edged dots, using the built-in Sprites/Default material.
+///   - Scaling only affects the "visual Transform" specified by the caller (e.g. the player's Visual child object),
+///     never the Collider attached elsewhere.
+///   - Shake goes through ScreenShake, only layering the camera display position, without changing Time.timeScale.
 /// </summary>
 public static class JuiceFX
 {
     private static Texture2D _softTex;
     private static Material _alphaMat;
 
-    // ───────────────────────── 資源 (懶建立) ─────────────────────────
+    // ───────────────────────── Resources (lazy creation) ─────────────────────────
 
-    /// <summary>程式畫一張中心實、邊緣柔的圓點貼圖,當作通用粒子圖。</summary>
+    /// <summary>Draws a dot texture in code with a solid center and soft edges, used as a generic particle image.</summary>
     private static Texture2D SoftTex()
     {
         if (_softTex != null) return _softTex;
@@ -38,9 +38,9 @@ public static class JuiceFX
             {
                 float dx = (x + 0.5f) - r;
                 float dy = (y + 0.5f) - r;
-                float d = Mathf.Sqrt(dx * dx + dy * dy) / r; // 0=中心 1=邊緣
+                float d = Mathf.Sqrt(dx * dx + dy * dy) / r; // 0=center 1=edge
                 float a = Mathf.Clamp01(1f - d);
-                a *= a; // 柔邊
+                a *= a; // soft edge
                 tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
             }
         }
@@ -64,7 +64,7 @@ public static class JuiceFX
 
     private static Sprite _softSprite;
 
-    /// <summary>柔邊圓點 Sprite (給 UI 粒子的 Image 使用)。</summary>
+    /// <summary>Soft-edged dot Sprite (used by the Image of UI particles).</summary>
     public static Sprite SoftSprite()
     {
         if (_softSprite != null) return _softSprite;
@@ -75,11 +75,11 @@ public static class JuiceFX
         return _softSprite;
     }
 
-    // ───────────────────────── 粒子 ─────────────────────────
+    // ───────────────────────── Particles ─────────────────────────
 
     /// <summary>
-    /// 在指定位置噴出一圈粒子 (一次性爆發,播完自動銷毀)。
-    /// unscaled=true 時用未縮放時間,讓粒子在 Time.timeScale=0 (例如抽卡暫停) 也能播。
+    /// Emits a ring of particles at the given position (a one-shot burst that auto-destroys when done).
+    /// When unscaled=true it uses unscaled time, so particles can still play when Time.timeScale=0 (e.g. a draw-card pause).
     /// </summary>
     public static void Burst(
         Vector3 position,
@@ -96,7 +96,7 @@ public static class JuiceFX
         go.transform.position = position;
 
         var ps = go.AddComponent<ParticleSystem>();
-        ps.Stop(true, ParticleSystemStopBehavior.StopEmitting); // 設定參數前先停
+        ps.Stop(true, ParticleSystemStopBehavior.StopEmitting); // stop before setting parameters
 
         var main = ps.main;
         main.loop = false;
@@ -108,8 +108,8 @@ public static class JuiceFX
         main.startColor = color;
         main.gravityModifier = gravity;
         main.simulationSpace = ParticleSystemSimulationSpace.World;
-        main.useUnscaledTime = unscaled; // 抽卡 (timeScale=0) 時仍要能播
-        main.stopAction = ParticleSystemStopAction.Destroy; // 系統結束後自動銷毀整個物件
+        main.useUnscaledTime = unscaled; // must still play during a draw-card pause (timeScale=0)
+        main.stopAction = ParticleSystemStopAction.Destroy; // auto-destroy the whole object after the system ends
 
         var emission = ps.emission;
         emission.enabled = true;
@@ -122,7 +122,7 @@ public static class JuiceFX
         shape.radius = 0.08f;
         shape.radiusThickness = 1f;
 
-        // 漸漸縮小 + 淡出,收尾更自然
+        // Gradually shrink + fade out for a more natural finish
         var sol = ps.sizeOverLifetime;
         sol.enabled = true;
         sol.size = new ParticleSystem.MinMaxCurve(1f, SizeCurve());
@@ -137,11 +137,11 @@ public static class JuiceFX
 
         ps.Play();
 
-        // 保險:即使 stopAction 沒觸發也會清掉
+        // Safety net: clean up even if stopAction doesn't fire
         Object.Destroy(go, main.duration + lifetime + 1f);
     }
 
-    /// <summary>灰白色塵土爆發 (腳步 / 落地 / 起跳)。</summary>
+    /// <summary>Grayish-white dust burst (footsteps / landing / jumping).</summary>
     public static void Dust(Vector3 position, int count = 10, float strength = 1f)
     {
         Burst(
@@ -155,8 +155,8 @@ public static class JuiceFX
     }
 
     /// <summary>
-    /// 死亡爆裂:一團彩色碎片向外炸開 + 一圈白色閃光粒子。
-    /// 用於「失敗死亡」(踏入 Hazard / 掉出區域) 的視覺表現。
+    /// Death burst: a cluster of colored fragments explodes outward + a ring of white flash particles.
+    /// Used for the visual feedback of a "fatal death" (stepping into a Hazard / falling out of bounds).
     /// </summary>
     public static void DeathBurst(Vector3 position, Color tint)
     {
@@ -165,9 +165,10 @@ public static class JuiceFX
     }
 
     /// <summary>
-    /// 升騰光氣 (升級感)。粒子從 footPosition 的一條水平帶持續往上飄、左右輕擺、縮小淡出,
-    /// 像 RPG 升級時的上升風。2D 友善:全部落在 XY 平面,不會往深度散開。
-    /// 持續 duration 秒發射,unscaled=true 時於 timeScale=0 (喝酒暫停) 也能播,播完自動銷毀。
+    /// Rising aura (sense of leveling up). Particles continuously drift upward from a horizontal band at footPosition,
+    /// sway slightly left and right, and shrink and fade out, like the rising wind of an RPG level-up. 2D friendly:
+    /// everything stays on the XY plane and does not spread out in depth.
+    /// Emits for duration seconds; when unscaled=true it can play at timeScale=0 (e.g. a drinking pause), and auto-destroys when done.
     /// </summary>
     public static void RisingAura(
         Vector3 footPosition,
@@ -192,10 +193,10 @@ public static class JuiceFX
         main.playOnAwake = false;
         main.duration = duration;
         main.startLifetime = new ParticleSystem.MinMaxCurve(particleLifetime * 0.7f, particleLifetime);
-        main.startSpeed = 0f; // 由 velocityOverLifetime 控制上升,避免徑向亂噴
+        main.startSpeed = 0f; // rise is driven by velocityOverLifetime to avoid radial spraying
         main.startSize = new ParticleSystem.MinMaxCurve(size * 0.5f, size);
         main.startColor = color;
-        main.gravityModifier = -0.04f; // 微負,持續上飄
+        main.gravityModifier = -0.04f; // slightly negative, keeps drifting upward
         main.simulationSpace = ParticleSystemSimulationSpace.World;
         main.useUnscaledTime = unscaled;
         main.stopAction = ParticleSystemStopAction.Destroy;
@@ -204,13 +205,13 @@ public static class JuiceFX
         emission.enabled = true;
         emission.rateOverTime = rate;
 
-        // 腳底一條扁平水平帶 (2D:只在 XY 平面分布)
+        // A flat horizontal band at the feet (2D: distributed only on the XY plane)
         var shape = ps.shape;
         shape.enabled = true;
         shape.shapeType = ParticleSystemShapeType.Box;
         shape.scale = new Vector3(width, 0.1f, 0.01f);
 
-        // 上升 + 左右輕擺
+        // Rise + slight left-right sway
         var vol = ps.velocityOverLifetime;
         vol.enabled = true;
         vol.space = ParticleSystemSimulationSpace.Local;
@@ -218,7 +219,7 @@ public static class JuiceFX
         vol.y = new ParticleSystem.MinMaxCurve(riseSpeed * 0.7f, riseSpeed);
         vol.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
-        // 縮小 + 淡出
+        // Shrink + fade out
         var sol = ps.sizeOverLifetime;
         sol.enabled = true;
         sol.size = new ParticleSystem.MinMaxCurve(1f, SizeCurve());
@@ -256,18 +257,18 @@ public static class JuiceFX
         return curve;
     }
 
-    // ───────────────────────── 縮放彈性 ─────────────────────────
+    // ───────────────────────── Scale Elasticity ─────────────────────────
 
     /// <summary>
-    /// Squash &amp; stretch:把視覺 Transform 先壓/拉到目標比例,再用彈性回到基準。
-    /// sx/sy 是相對 baseScale 的倍率 (例如起跳 0.8,1.25;落地 1.25,0.7)。
-    /// 只作用在傳入的視覺 Transform,不影響任何 Collider。
+    /// Squash &amp; stretch: first squash/stretch the visual Transform to the target ratio, then spring back to the baseline.
+    /// sx/sy are multipliers relative to baseScale (e.g. jump 0.8,1.25; land 1.25,0.7).
+    /// Only affects the passed-in visual Transform, never any Collider.
     /// </summary>
     public static void Squash(Transform visual, Vector3 baseScale, float sx, float sy, float duration = 0.2f)
     {
         if (visual == null) return;
 
-        visual.DOKill(true); // 完成並終止前一段,避免疊加殘留
+        visual.DOKill(true); // complete and kill the previous segment to avoid leftover stacking
         visual.localScale = baseScale;
 
         var target = new Vector3(baseScale.x * sx, baseScale.y * sy, baseScale.z);
@@ -278,7 +279,7 @@ public static class JuiceFX
         seq.Append(visual.DOScale(baseScale, duration * 0.65f).SetEase(Ease.OutBack));
     }
 
-    /// <summary>對視覺 Transform 做一次彈性 punch (適合拾取、命中等)。</summary>
+    /// <summary>Performs a single elastic punch on the visual Transform (good for pickups, hits, etc.).</summary>
     public static void Punch(Transform visual, Vector3 baseScale, float strength = 0.25f, float duration = 0.3f)
     {
         if (visual == null) return;
@@ -287,9 +288,9 @@ public static class JuiceFX
         visual.DOPunchScale(baseScale * strength, duration, 6, 0.7f).SetTarget(visual);
     }
 
-    // ───────────────────────── 震動 ─────────────────────────
+    // ───────────────────────── Shake ─────────────────────────
 
-    /// <summary>觸發螢幕震動 (自動在主相機上建立 ScreenShake;不改 timeScale、不碰 Collider)。</summary>
+    /// <summary>Triggers a screen shake (automatically creates ScreenShake on the main camera; doesn't change timeScale or touch Colliders).</summary>
     public static void Shake(float strength, float duration)
     {
         var cam = Camera.main;
@@ -300,12 +301,12 @@ public static class JuiceFX
         shake.Shake(strength, duration);
     }
 
-    // ───────────────────────── 全螢幕閃光 ─────────────────────────
+    // ───────────────────────── Full-Screen Flash ─────────────────────────
 
     /// <summary>
-    /// 全螢幕色閃 (例如失敗時的紅閃)。建立一個獨立的 Overlay Canvas + Image,
-    /// 從指定顏色淡出後自動銷毀。不接收點擊、不影響任何邏輯或 Collider。
-    /// 使用 unscaled 時間,即使遊戲暫停 (timeScale=0) 也能播。
+    /// Full-screen color flash (e.g. the red flash on failure). Creates an independent Overlay Canvas + Image,
+    /// fades out from the given color and then auto-destroys. Does not receive clicks, and does not affect any logic or Collider.
+    /// Uses unscaled time so it can play even when the game is paused (timeScale=0).
     /// </summary>
     public static void ScreenFlash(Color color, float duration = 0.45f)
     {
@@ -331,13 +332,13 @@ public static class JuiceFX
             .OnComplete(() => Object.Destroy(go));
     }
 
-    // ───────────────────────── UI 粒子爆發 ─────────────────────────
+    // ───────────────────────── UI Particle Burst ─────────────────────────
 
     /// <summary>
-    /// 在 UI 上噴一圈放射狀粒子 (用 Image + DOTween,保證顯示在抽卡 UI 之上)。
-    /// 自建一個比抽卡 Canvas 更高層的 Overlay Canvas,粒子從畫面中心 (可加 offset)
-    /// 向外放射 + 縮小淡出,像「恭喜抽到!」的慶祝爆發。
-    /// 全程用未縮放時間,於抽卡暫停 (timeScale=0) 也能播,播完自動銷毀。
+    /// Emits a ring of radial particles on the UI (using Image + DOTween, guaranteed to render above the draw-card UI).
+    /// Creates an Overlay Canvas at a higher layer than the draw-card Canvas; particles radiate outward from the screen
+    /// center (an offset can be added) + shrink and fade out, like the celebratory burst of "congrats on the draw!".
+    /// Uses unscaled time throughout so it can play during a draw-card pause (timeScale=0), and auto-destroys when done.
     /// </summary>
     public static void UIBurst(
         Color color,
@@ -351,7 +352,7 @@ public static class JuiceFX
 
         var canvas = go.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 6000; // 高於抽卡 UI(1000)與全螢幕閃光(5000)
+        canvas.sortingOrder = 6000; // higher than the draw-card UI (1000) and the full-screen flash (5000)
 
         var scaler = go.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -377,12 +378,12 @@ public static class JuiceFX
             img.color = color;
             img.raycastTarget = false;
 
-            // 放射方向:均勻分布 + 抖動,避免太規律
+            // Radial direction: even distribution + jitter to avoid being too regular
             float ang = (i / (float)count) * Mathf.PI * 2f + Random.Range(-0.25f, 0.25f);
             float dist = spread * Random.Range(0.6f, 1.15f);
             Vector2 dir = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang));
             Vector2 dest = centerOffset + dir * dist;
-            dest.y -= dist * 0.25f; // 尾段略微下垂,像煙火灑落
+            dest.y -= dist * 0.25f; // droop slightly at the tail, like fireworks falling
 
             float dur = duration * Random.Range(0.7f, 1f);
             rt.DOAnchorPos(dest, dur).SetUpdate(true).SetEase(Ease.OutCubic);
@@ -390,7 +391,7 @@ public static class JuiceFX
             img.DOFade(0f, dur).SetUpdate(true).SetEase(Ease.InQuad);
         }
 
-        // 用未縮放的延遲呼叫銷毀 (timeScale=0 下 Object.Destroy(go, t) 不會觸發)
+        // Use an unscaled delayed call to destroy (Object.Destroy(go, t) won't fire at timeScale=0)
         DOVirtual.DelayedCall(duration + 0.4f, () =>
         {
             if (go != null) Object.Destroy(go);

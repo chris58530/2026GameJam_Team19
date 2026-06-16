@@ -5,31 +5,31 @@ using UnityEngine.UI;
 using UnityEngine.Video;
 
 /// <summary>
-/// 開場動畫：播放影片，播完跳到下一關。支援 WebGL！
+/// Opening animation: plays a video, then jumps to the next level when it finishes. WebGL supported!
 /// 
-/// === WebGL 重要說明 ===
-/// WebGL 不支援 VideoClip（拖入的 mp4），必須用 URL 從 StreamingAssets 讀取。
-/// 因此請：
-///   1. 在 Assets/ 底下建立資料夾 "StreamingAssets"
-///   2. 把你的 mp4 放進去，例如 Assets/StreamingAssets/Opening.mp4
-///   3. 在此腳本的 videoFileName 欄位填入檔名 "Opening.mp4"
+/// === Important WebGL notes ===
+/// WebGL does not support VideoClip (a dragged-in mp4); it must read from StreamingAssets via URL.
+/// So please:
+///   1. Create a folder named "StreamingAssets" under Assets/
+///   2. Put your mp4 in it, e.g. Assets/StreamingAssets/Opening.mp4
+///   3. Fill in the file name "Opening.mp4" in this script's videoFileName field
 /// 
-/// 這樣 Editor、PC、WebGL 都能正常播放。
+/// This way it plays correctly in the Editor, on PC, and on WebGL.
 /// 
-/// （如果只在 PC/Editor 玩，也可以改用 videoClip 欄位拖 mp4，
-///   但 WebGL 一定要用 videoFileName。）
+/// (If you only play on PC/Editor, you can also drag an mp4 into the videoClip field instead,
+///   but WebGL must use videoFileName.)
 /// </summary>
 public class OpeningAnimationController : MonoBehaviour
 {
-    [Header("影片來源（WebGL 必須用這個）")]
-    [Tooltip("放在 Assets/StreamingAssets/ 裡的影片檔名，例如 Opening.mp4")]
+    [Header("Video Source (WebGL must use this)")]
+    [Tooltip("The video file name placed in Assets/StreamingAssets/, e.g. Opening.mp4")]
     [SerializeField] private string videoFileName = "Opening.mp4";
 
-    [Header("影片來源（僅 PC/Editor，WebGL 無效）")]
-    [Tooltip("直接拖 mp4。WebGL 不支援，留空即可")]
+    [Header("Video Source (PC/Editor only, ignored on WebGL)")]
+    [Tooltip("Drag an mp4 directly. Not supported on WebGL, leave empty if so")]
     [SerializeField] private VideoClip videoClip;
 
-    [Header("跳過設定")]
+    [Header("Skip Settings")]
     [SerializeField] private bool allowSkip = true;
     [SerializeField] private float skipMinWait = 2f;
 
@@ -40,19 +40,19 @@ public class OpeningAnimationController : MonoBehaviour
 
     private IEnumerator Start()
     {
-        // 等一帧確保場景就緒
+        // Wait one frame to make sure the scene is ready
         yield return null;
 
         bool hasSource = SetupVideoPlayer();
         if (!hasSource)
         {
-            Debug.LogWarning("[Opening] 沒有設定影片，3 秒後跳過。");
+            Debug.LogWarning("[Opening] No video set, skipping after 3 seconds.");
             yield return new WaitForSeconds(3f);
             GoNext();
             yield break;
         }
 
-        // 準備影片
+        // Prepare the video
         vp.Prepare();
 
         float timeout = 10f;
@@ -65,21 +65,21 @@ public class OpeningAnimationController : MonoBehaviour
 
         if (!vp.isPrepared)
         {
-            Debug.LogError("[Opening] 影片準備逾時！檢查檔案路徑與格式。直接跳過。");
+            Debug.LogError("[Opening] Video preparation timed out! Check the file path and format. Skipping.");
             GoNext();
             yield break;
         }
 
         vp.loopPointReached += _ => GoNext();
         vp.Play();
-        Debug.Log("[Opening] 影片開始播放。");
+        Debug.Log("[Opening] Video started playing.");
     }
 
     /// <summary>
-    /// 設定 VideoPlayer，回傳是否有有效的影片來源。
-    /// 平台自動 fallback：
-    ///   - WebGL：強制用 URL（StreamingAssets），因為不支援 VideoClip
-    ///   - 其他平台：優先用 VideoClip，沒有才用 URL
+    /// Sets up the VideoPlayer and returns whether there is a valid video source.
+    /// Platform auto-fallback:
+    ///   - WebGL: forced to use URL (StreamingAssets) because VideoClip is not supported
+    ///   - Other platforms: prefer VideoClip, fall back to URL only if there is none
     /// </summary>
     private bool SetupVideoPlayer()
     {
@@ -95,36 +95,36 @@ public class OpeningAnimationController : MonoBehaviour
         vp.targetTexture = rt;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-        // WebGL：只能用 URL（StreamingAssets）
+        // WebGL: can only use URL (StreamingAssets)
         if (!string.IsNullOrEmpty(videoFileName))
         {
             string url = Path.Combine(Application.streamingAssetsPath, videoFileName);
             vp.source = VideoSource.Url;
             vp.url = url;
-            Debug.Log("[Opening] (WebGL) 使用 URL 播放: " + url);
+            Debug.Log("[Opening] (WebGL) Playing via URL: " + url);
             CreateDisplay();
             return true;
         }
-        Debug.LogError("[Opening] WebGL 需要設定 videoFileName（StreamingAssets 內的影片）！");
+        Debug.LogError("[Opening] WebGL requires videoFileName to be set (the video inside StreamingAssets)!");
         return false;
 #else
-        // Editor / PC：優先用 VideoClip
+        // Editor / PC: prefer VideoClip
         if (videoClip != null)
         {
             vp.source = VideoSource.VideoClip;
             vp.clip = videoClip;
-            Debug.Log("[Opening] 使用 VideoClip 播放。");
+            Debug.Log("[Opening] Playing via VideoClip.");
             CreateDisplay();
             return true;
         }
 
-        // Fallback：用 URL
+        // Fallback: use URL
         if (!string.IsNullOrEmpty(videoFileName))
         {
             string url = Path.Combine(Application.streamingAssetsPath, videoFileName);
             vp.source = VideoSource.Url;
             vp.url = url;
-            Debug.Log("[Opening] (Fallback) 使用 URL 播放: " + url);
+            Debug.Log("[Opening] (Fallback) Playing via URL: " + url);
             CreateDisplay();
             return true;
         }
@@ -175,6 +175,6 @@ public class OpeningAnimationController : MonoBehaviour
         if (StoryFlowManager.Instance != null)
             StoryFlowManager.Instance.StartGameLoop();
         else
-            Debug.LogError("[Opening] StoryFlowManager 不存在！");
+            Debug.LogError("[Opening] StoryFlowManager does not exist!");
     }
 }

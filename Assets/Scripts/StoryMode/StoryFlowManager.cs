@@ -2,25 +2,25 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 線性故事模式流程管理器（Singleton, DontDestroyOnLoad）。
-/// 管理 TitleMenu → OpeningAnimation → Level01~LevelN → Ending 的完整流程。
+/// Linear story mode flow manager (Singleton, DontDestroyOnLoad).
+/// Manages the full flow: TitleMenu -> OpeningAnimation -> Level01~LevelN -> Ending.
 /// 
-/// 設計重點：
-///   - 關卡列表在 Inspector 中以 string[] 設定，新增關卡只要加場景名即可
-///   - 與現有 GameFlowManager/SceneLoadManager 系統完全獨立，不互相干擾
-///   - 支援 Victory / Fail 兩種結局
+/// Design highlights:
+///   - The level list is configured as a string[] in the Inspector; adding a level only requires adding a scene name
+///   - Fully independent from the existing GameFlowManager/SceneLoadManager systems; they do not interfere with each other
+///   - Supports both Victory and Fail endings
 /// 
-/// 設定方式：
-///   1. 在 TitleMenu 場景中建立空 GameObject，命名為 "StoryFlowManager"
-///   2. 掛上此腳本
-///   3. 在 Inspector 中填入場景名稱：
+/// Setup:
+///   1. In the TitleMenu scene, create an empty GameObject named "StoryFlowManager"
+///   2. Attach this script
+///   3. Fill in the scene names in the Inspector:
 ///      - titleMenuScene: "TitleMenu"
 ///      - openingAnimationScene: "OpeningAnimation"
-///      - levelScenes: ["Level01", "Level02", "Level03"] ← 可自由增減
+///      - levelScenes: ["Level01", "Level02", "Level03"] <- freely add or remove
 ///      - endingScene: "Ending"
-///   4. 確保所有場景已加入 Build Settings
+///   4. Make sure all scenes are added to Build Settings
 /// 
-/// 公開方法（供其他腳本呼叫）：
+/// Public methods (called by other scripts):
 ///   StoryFlowManager.Instance.StartOpeningAnimation()
 ///   StoryFlowManager.Instance.StartGameLoop()
 ///   StoryFlowManager.Instance.CompleteLevel()
@@ -34,36 +34,36 @@ public class StoryFlowManager : MonoBehaviour
     // ========== Singleton ==========
     public static StoryFlowManager Instance { get; private set; }
 
-    // ========== Inspector 設定 ==========
+    // ========== Inspector Settings ==========
 
-    [Header("場景名稱設定")]
-    [Tooltip("標題選單場景名稱")]
+    [Header("Scene Name Settings")]
+    [Tooltip("Title menu scene name")]
     [SerializeField] private string titleMenuScene = "TitleMenu";
 
-    [Tooltip("開場動畫場景名稱")]
+    [Tooltip("Opening animation scene name")]
     [SerializeField] private string openingAnimationScene = "OpeningAnimation";
 
-    [Tooltip("關卡場景名稱列表（按順序排列，可自由增減）")]
+    [Tooltip("List of level scene names (in order, freely add or remove)")]
     [SerializeField] private string[] levelScenes = { "Game0", "Game1", "Game2" };
 
-    [Tooltip("結局場景名稱")]
+    [Tooltip("Ending scene name")]
     [SerializeField] private string endingScene = "Ending";
 
-    // ========== 狀態 ==========
+    // ========== State ==========
 
-    /// <summary>遊戲結果：Victory 或 Fail。</summary>
+    /// <summary>Game result: Victory or Fail.</summary>
     public enum GameResult { None, Victory, Fail }
 
-    /// <summary>當前遊戲結果（供 EndingUI 讀取）。</summary>
+    /// <summary>Current game result (read by EndingUI).</summary>
     public GameResult CurrentResult { get; private set; } = GameResult.None;
 
-    /// <summary>當前關卡索引（0-based）。</summary>
+    /// <summary>Current level index (0-based).</summary>
     public int CurrentLevelIndex { get; private set; } = 0;
 
-    /// <summary>總關卡數量。</summary>
+    /// <summary>Total number of levels.</summary>
     public int TotalLevelCount => levelScenes != null ? levelScenes.Length : 0;
 
-    /// <summary>當前關卡場景名稱。</summary>
+    /// <summary>Current level scene name.</summary>
     public string CurrentLevelSceneName
     {
         get
@@ -74,11 +74,11 @@ public class StoryFlowManager : MonoBehaviour
         }
     }
 
-    // ========== Unity 生命週期 ==========
+    // ========== Unity Lifecycle ==========
 
     private void Awake()
     {
-        // Singleton 模式：確保只有一個實例
+        // Singleton pattern: ensure only one instance exists
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -89,11 +89,11 @@ public class StoryFlowManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    // ========== 公開方法 ==========
+    // ========== Public Methods ==========
 
     /// <summary>
-    /// 從 TitleMenu 進入 OpeningAnimation。
-    /// 由 TitleMenuUI 的 Start 按鈕呼叫。
+    /// Go from TitleMenu into OpeningAnimation.
+    /// Called by the Start button in TitleMenuUI.
     /// </summary>
     public void StartOpeningAnimation()
     {
@@ -103,8 +103,8 @@ public class StoryFlowManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 從 OpeningAnimation 進入第一個關卡。
-    /// 由 OpeningAnimationController.OnOpeningAnimationFinished() 呼叫。
+    /// Go from OpeningAnimation into the first level.
+    /// Called by OpeningAnimationController.OnOpeningAnimationFinished().
     /// </summary>
     public void StartGameLoop()
     {
@@ -113,19 +113,19 @@ public class StoryFlowManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 當前關卡通關，前往下一關或 Victory Ending。
-    /// 由 LevelManager.OnLevelCleared() 呼叫。
+    /// Current level cleared; advance to the next level or the Victory Ending.
+    /// Called by LevelManager.OnLevelCleared().
     /// </summary>
     public void CompleteLevel()
     {
         CurrentLevelIndex++;
 
-        // 還有下一關 → 載入下一關
+        // There is a next level -> load the next level
         if (CurrentLevelIndex < TotalLevelCount)
         {
             LoadCurrentLevel();
         }
-        // 全部通關 → Victory Ending
+        // All levels cleared -> Victory Ending
         else
         {
             CurrentResult = GameResult.Victory;
@@ -134,8 +134,8 @@ public class StoryFlowManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 玩家在任何關卡失敗，前往 Fail Ending。
-    /// 由 LevelManager.OnLevelFailed() 呼叫。
+    /// The player failed on any level; go to the Fail Ending.
+    /// Called by LevelManager.OnLevelFailed().
     /// </summary>
     public void FailLevel()
     {
@@ -144,8 +144,8 @@ public class StoryFlowManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 從 Ending 重新開始（從第一關）。
-    /// 由 EndingUI 的 Retry 按鈕呼叫。
+    /// Restart from the Ending (from the first level).
+    /// Called by the Retry button in EndingUI.
     /// </summary>
     public void RetryGame()
     {
@@ -155,8 +155,8 @@ public class StoryFlowManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 返回標題選單。
-    /// 由 EndingUI 的 Back to Title 按鈕呼叫。
+    /// Return to the title menu.
+    /// Called by the Back to Title button in EndingUI.
     /// </summary>
     public void BackToTitle()
     {
@@ -166,12 +166,12 @@ public class StoryFlowManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 退出遊戲。
-    /// 由 EndingUI 的 Quit 按鈕呼叫。
+    /// Quit the game.
+    /// Called by the Quit button in EndingUI.
     /// </summary>
     public void QuitGame()
     {
-        Debug.Log("[StoryFlowManager] 退出遊戲");
+        Debug.Log("[StoryFlowManager] Quitting game");
 
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
@@ -180,22 +180,22 @@ public class StoryFlowManager : MonoBehaviour
 #endif
     }
 
-    // ========== 內部方法 ==========
+    // ========== Internal Methods ==========
 
     /// <summary>
-    /// 載入當前索引的關卡場景。
+    /// Load the level scene at the current index.
     /// </summary>
     private void LoadCurrentLevel()
     {
         if (levelScenes == null || levelScenes.Length == 0)
         {
-            Debug.LogError("[StoryFlowManager] levelScenes 為空！請在 Inspector 中設定關卡場景名稱。");
+            Debug.LogError("[StoryFlowManager] levelScenes is empty! Please set the level scene names in the Inspector.");
             return;
         }
 
         if (CurrentLevelIndex < 0 || CurrentLevelIndex >= levelScenes.Length)
         {
-            Debug.LogError($"[StoryFlowManager] CurrentLevelIndex ({CurrentLevelIndex}) 超出範圍！");
+            Debug.LogError($"[StoryFlowManager] CurrentLevelIndex ({CurrentLevelIndex}) is out of range!");
             return;
         }
 
@@ -203,34 +203,34 @@ public class StoryFlowManager : MonoBehaviour
 
         if (string.IsNullOrEmpty(sceneName))
         {
-            Debug.LogError($"[StoryFlowManager] levelScenes[{CurrentLevelIndex}] 為空字串！");
+            Debug.LogError($"[StoryFlowManager] levelScenes[{CurrentLevelIndex}] is an empty string!");
             return;
         }
 
-        Debug.Log($"[StoryFlowManager] 載入關卡 {CurrentLevelIndex + 1}/{TotalLevelCount}: {sceneName}");
+        Debug.Log($"[StoryFlowManager] Loading level {CurrentLevelIndex + 1}/{TotalLevelCount}: {sceneName}");
         LoadScene(sceneName);
     }
 
     /// <summary>
-    /// 統一的場景載入方法。
-    /// 如果 SceneLoadManager 存在就用 Loading 過渡，否則直接載入。
+    /// Unified scene loading method.
+    /// Uses the Loading transition if SceneLoadManager exists, otherwise loads directly.
     /// </summary>
     private void LoadScene(string sceneName)
     {
         if (string.IsNullOrEmpty(sceneName))
         {
-            Debug.LogError("[StoryFlowManager] LoadScene: sceneName 為空！");
+            Debug.LogError("[StoryFlowManager] LoadScene: sceneName is empty!");
             return;
         }
 
-        // 優先使用現有的 SceneLoadManager（帶 Loading 過渡）
+        // Prefer the existing SceneLoadManager (with Loading transition)
         if (SceneLoadManager.Instance != null)
         {
             SceneLoadManager.Instance.LoadSceneWithLoading(sceneName);
         }
         else
         {
-            // 直接載入（無 Loading 過渡）
+            // Load directly (no Loading transition)
             SceneManager.LoadScene(sceneName);
         }
     }

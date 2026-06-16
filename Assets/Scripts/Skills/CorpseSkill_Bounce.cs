@@ -1,13 +1,13 @@
 using UnityEngine;
 
 /// <summary>
-/// 彈跳屍體標記。
-/// 由 PlayerController2D 在跳躍時偵測:若玩家所踩的地面 collider 帶有此元件,
-/// 跳躍力 × jumpMultiplier (預設 2)。屍體本身仍是可踩的實體平台。
+/// Bounce corpse marker.
+/// Detected by PlayerController2D when jumping: if the ground collider the player stands on has this component,
+/// the jump force is multiplied by jumpMultiplier (default 2). The corpse is otherwise a solid platform the player can stand on.
 /// </summary>
 public class CorpseSkill_Bounce : MonoBehaviour
 {
-    [Tooltip("跳躍力倍率")]
+    [Tooltip("Jump force multiplier")]
     public float jumpMultiplier = 2f;
 
     public void Configure(float multiplier)

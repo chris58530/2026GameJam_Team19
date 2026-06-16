@@ -3,22 +3,25 @@ using UnityEngine.UI;
 using UnityEngine.Video;
 
 /// <summary>
-/// 標題選單：背景影片 + Start 按鈕。
+/// Title menu: background video + Start button.
 /// 
-/// 設定：
-///   1. 建立 Canvas + Start 按鈕
-///   2. 掛此腳本，拖入按鈕和影片（影片可選）
-///   3. 不需要建 RawImage，腳本自動處理
+/// Setup:
+///   1. Create a Canvas + Start button
+///   2. Attach this script and drag in the buttons and video (video is optional)
+///   3. No need to create a RawImage, the script handles it automatically
 /// </summary>
 public class TitleMenuUI : MonoBehaviour
 {
-    [Header("按鈕")]
+    [Header("Buttons")]
     [SerializeField] private Button startButton;
     [SerializeField] private Button quitButton;
 
-    [Header("背景影片（可選）")]
-    [Tooltip("標題背景影片，循環播放")]
+    [Header("Background Video (optional)")]
+    [Tooltip("Title background video, looped (for Editor / PC)")]
     [SerializeField] private VideoClip backgroundClip;
+
+    [Tooltip("For WebGL: relative path inside the StreamingAssets folder, e.g. Videos/intro.mp4. WebGL cannot play a VideoClip directly, so this file path must be used instead.")]
+    [SerializeField] private string webglVideoFileName = "Videos/intro.mp4";
 
     private VideoPlayer videoPlayer;
     private RenderTexture rt;
@@ -28,8 +31,14 @@ public class TitleMenuUI : MonoBehaviour
         if (startButton != null) startButton.onClick.AddListener(OnStart);
         if (quitButton != null) quitButton.onClick.AddListener(OnQuit);
 
-        if (backgroundClip != null)
+        // WebGL requires a file name to play; other platforms just need a clip
+#if UNITY_WEBGL && !UNITY_EDITOR
+        if (!string.IsNullOrEmpty(webglVideoFileName))
             PlayBackground();
+#else
+        if (backgroundClip != null || !string.IsNullOrEmpty(webglVideoFileName))
+            PlayBackground();
+#endif
     }
 
     private void PlayBackground()
@@ -38,17 +47,40 @@ public class TitleMenuUI : MonoBehaviour
         rt.Create();
 
         videoPlayer = gameObject.AddComponent<VideoPlayer>();
-        videoPlayer.clip = backgroundClip;
+
+        // WebGL does not support VideoClip, use the StreamingAssets URL stream instead
+#if UNITY_WEBGL && !UNITY_EDITOR
+        videoPlayer.source = VideoSource.Url;
+        videoPlayer.url = System.IO.Path.Combine(Application.streamingAssetsPath, webglVideoFileName);
+#else
+        if (backgroundClip != null)
+        {
+            videoPlayer.source = VideoSource.VideoClip;
+            videoPlayer.clip = backgroundClip;
+        }
+        else
+        {
+            videoPlayer.source = VideoSource.Url;
+            videoPlayer.url = System.IO.Path.Combine(Application.streamingAssetsPath, webglVideoFileName);
+        }
+#endif
         videoPlayer.playOnAwake = false;
         videoPlayer.isLooping = true;
-        videoPlayer.audioOutputMode = VideoAudioOutputMode.Direct;
         videoPlayer.renderMode = VideoRenderMode.RenderTexture;
         videoPlayer.targetTexture = rt;
 
-        // 自動建立顯示用的 RawImage（放在 Canvas 最底層）
+        // WebGL: browsers block videos "with sound" from auto-playing before any user interaction.
+        // The background video plays as soon as the page loads, so it must be muted to avoid being blocked.
+#if UNITY_WEBGL && !UNITY_EDITOR
+        videoPlayer.audioOutputMode = VideoAudioOutputMode.None;
+#else
+        videoPlayer.audioOutputMode = VideoAudioOutputMode.Direct;
+#endif
+
+        // Automatically create the RawImage used for display (placed at the bottom layer of the Canvas)
         var rawImageObj = new GameObject("BgVideoImage");
         rawImageObj.transform.SetParent(transform, false);
-        rawImageObj.transform.SetAsFirstSibling(); // 最底層，按鈕在上面
+        rawImageObj.transform.SetAsFirstSibling(); // bottom layer, buttons sit on top
 
         var rectTransform = rawImageObj.AddComponent<RectTransform>();
         rectTransform.anchorMin = Vector2.zero;

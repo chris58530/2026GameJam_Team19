@@ -3,58 +3,58 @@ using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
-/// 抽卡演出 (相機 zoom + 喝酒動畫)。實作 ISkillDrawPresenter,掛在 GameManager 上,
-/// CorpseSkillSystem 會自動抓到並在抽卡前後呼叫。與抽卡邏輯解耦,不要可直接移除元件。
+/// Card-draw cinematic (camera zoom + drinking animation). Implements ISkillDrawPresenter, attached to the GameManager;
+/// CorpseSkillSystem picks it up automatically and calls it before and after a draw. It is decoupled from the draw logic and can be removed directly if not wanted.
 ///
-/// 流程:
-///   PlayIntro  → 停用相機跟隨、zoom in 到玩家。
-///   (中間)     → CorpseSkillSystem 顯示卡片 / 拉霸。
-///   PlayOutro  → 播喝酒動畫 (Animator 或佔位 tween) → zoom out → 恢復相機跟隨。
+/// Flow:
+///   PlayIntro  -> disable camera follow, zoom in on the player.
+///   (middle)   -> CorpseSkillSystem shows the card / slot machine.
+///   PlayOutro  -> play the drinking animation (Animator or placeholder tween) -> zoom out -> re-enable camera follow.
 ///
-/// 整段為暫停狀態,全部用未縮放時間。
+/// The whole section is paused, so everything uses unscaled time.
 /// </summary>
 public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
 {
-    [Header("相機")]
-    [Tooltip("要 zoom 的相機。留空自動抓 Camera.main")]
+    [Header("Camera")]
+    [Tooltip("The camera to zoom. Leave empty to auto-grab Camera.main")]
     public Camera cam;
 
-    [Tooltip("相機跟隨腳本 (zoom 期間會停用)。留空自動從相機上找")]
+    [Tooltip("Camera follow script (disabled during zoom). Leave empty to auto-find it on the camera")]
     public CameraFollow2D follow;
 
-    [Tooltip("zoom in 後的正交 size (越小越近)")]
+    [Tooltip("Orthographic size after zooming in (smaller = closer)")]
     public float zoomInSize = 3.5f;
 
-    [Tooltip("zoom in / out 的秒數")]
+    [Tooltip("Duration of zoom in / out in seconds")]
     public float zoomDuration = 0.4f;
 
-    [Tooltip("zoom in 聚焦時的相機偏移 (相機看的點相對玩家)。Y 設正值會把相機中心往上抬,讓主角落在畫面下方、上方留給抽牌 UI。")]
+    [Tooltip("Camera offset when focusing during zoom in (the point the camera looks at relative to the player). A positive Y raises the camera center upward so the character sits in the lower part of the screen, leaving the top for the card-draw UI.")]
     public Vector2 focusOffset = new Vector2(0f, 2f);
 
-    [Header("角色動畫 (抽卡演出)")]
-    [Tooltip("玩家 Animator (可選)。留空會自動從玩家身上 (含子物件) 尋找")]
+    [Header("Character animation (card-draw cinematic)")]
+    [Tooltip("Player Animator (optional). Leave empty to auto-find it on the player (including children)")]
     public Animator playerAnimator;
 
-    [Tooltip("抽卡期間持續播放的 Idle 動畫狀態名稱")]
+    [Tooltip("Name of the Idle animation state played continuously during the draw")]
     public string idleState = "idle";
 
-    [Tooltip("抽完後播放的喝酒動畫狀態名稱 (狀態不存在時自動略過)")]
+    [Tooltip("Name of the drinking animation state played after the draw (automatically skipped if the state does not exist)")]
     public string drinkState = "drink";
 
-    [Tooltip("喝酒演出持續秒數")]
+    [Tooltip("Duration of the drinking cinematic in seconds")]
     public float drinkDuration = 0.8f;
 
-    [Tooltip("沒有 Animator 或找不到喝酒狀態時,用 DOTween 佔位 (玩家咕嘟縮放)")]
+    [Tooltip("Use a DOTween placeholder (player gulp scale) when there is no Animator or the drink state can't be found")]
     public bool usePlaceholderIfNoAnimator = true;
 
-    [Tooltip("玩家 Tag")]
+    [Tooltip("Player Tag")]
     public string playerTag = "Player";
 
     private Transform _player;
     private float _baseSize;
     private Vector3 _baseCamPos;
 
-    // 抽卡期間暫時把 Animator 切到 UnscaledTime (timeScale=0 也能播),結束後還原
+    // During the draw, temporarily switch the Animator to UnscaledTime (so it plays even at timeScale=0), then restore it when done
     private AnimatorUpdateMode _origUpdateMode;
     private bool _animOverridden;
 
@@ -73,14 +73,14 @@ public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
             var p = GameObject.FindGameObjectWithTag(playerTag);
             if (p != null) _player = p.transform;
         }
-        // 自動從玩家 (含子物件) 抓 Animator,供抽卡時的 idle / drink 使用
+        // Auto-grab the Animator from the player (including children) for idle / drink during the draw
         if (playerAnimator == null && _player != null)
             playerAnimator = _player.GetComponentInChildren<Animator>();
     }
 
     private CorpseSkillSystem _skillSystem;
 
-    /// <summary>取得抽到技能對應的顏色 (沿用 CorpseSkillSystem 的配色)。</summary>
+    /// <summary>Gets the color matching the drawn skill (reuses the color scheme from CorpseSkillSystem).</summary>
     private Color ResolveSkillColor(CorpseSkillType result)
     {
         if (_skillSystem == null)
@@ -97,7 +97,7 @@ public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
 
         if (follow != null) follow.enabled = false;
 
-        // 抽卡期間角色持續播放 idle (暫停時也要能播 → 切 UnscaledTime)
+        // During the draw the character keeps playing idle (it must play even while paused -> switch to UnscaledTime)
         BeginAnimOverride();
         PlayState(idleState);
 
@@ -122,7 +122,7 @@ public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
     {
         ResolvePlayer();
 
-        // 抽完馬上播放喝酒動畫;drink 狀態不存在時退回佔位 tween
+        // Play the drinking animation right after the draw; fall back to the placeholder tween if the drink state does not exist
         if (playerAnimator != null && HasState(drinkState))
         {
             PlayState(drinkState);
@@ -130,14 +130,14 @@ public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
         }
         else if (usePlaceholderIfNoAnimator && _player != null)
         {
-            // 佔位「咕嘟」手感:DOPunchScale 自動回到原本縮放,不留殘留
+            // Placeholder "gulp" feel: DOPunchScale automatically returns to the original scale, leaving no residue
             _player.DOComplete();
             _player.DOPunchScale(new Vector3(0.18f, 0.18f, 0f), drinkDuration, 4, 0.6f).SetUpdate(true);
             yield return new WaitForSecondsRealtime(drinkDuration);
         }
 
-        // 喝完那一刻:在玩家腳底升起「抽到的技能顏色」光氣 (升級感的上升風),
-        // 讓喝酒演出與抽到的技能連動。timeScale=0 故用未縮放時間。
+        // The moment the drink finishes: raise an aura of "the drawn skill's color" at the player's feet (a rising vibe for the upgrade feel),
+        // tying the drinking cinematic to the drawn skill. timeScale=0, so use unscaled time.
         if (_player != null)
         {
             Color skillColor = ResolveSkillColor(result);
@@ -147,16 +147,16 @@ public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
             JuiceFX.Shake(0.16f, 0.25f);
         }
 
-        // 喝完回到 idle (zoom out 期間維持 idle,恢復遊戲後再交回 PlayerController2D)
+        // After drinking, return to idle (keep idle during zoom out; hand control back to PlayerController2D once the game resumes)
         PlayState(idleState);
 
-        // zoom out 回原本
+        // Zoom out back to the original
         if (cam != null)
         {
-            // 目標位置:直接對齊「玩家當前位置 + 跟隨偏移」,而不是進演出前記下的舊相機座標 (_baseCamPos)。
-            // 否則若抽卡時相機還沒貼齊玩家 (例如剛跳完還在追),zoom out 會先飛回舊點、follow 再啟用又拉到主角,
-            // 看起來就是「先移動到某處才移動到主角」的兩段式跳動。
-            // 暫停期間 Time.timeScale = 0,CameraFollow2D 不會自行更新,所以這裡用 tween 把相機帶到正確落點。
+            // Target position: align directly to "the player's current position + follow offset", not the old camera coordinate (_baseCamPos) recorded before the cinematic.
+            // Otherwise, if the camera had not yet snapped to the player during the draw (e.g. still chasing right after a jump), zooming out would first fly back to the old point, then follow would re-enable and pull to the character,
+            // which looks like a two-stage jump of "move somewhere first, then move to the character".
+            // While paused Time.timeScale = 0, so CameraFollow2D won't update on its own; here we use a tween to bring the camera to the correct landing spot.
             Vector3 outTarget = _baseCamPos;
             if (_player != null)
             {
@@ -175,15 +175,15 @@ public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
             yield return new WaitForSecondsRealtime(zoomDuration);
         }
 
-        // 還原 Animator 更新模式 (恢復遊戲後由 PlayerController2D 接手驅動動畫)
+        // Restore the Animator update mode (after the game resumes, PlayerController2D takes over driving the animation)
         EndAnimOverride();
 
         if (follow != null) follow.enabled = true;
     }
 
-    // ---------------- 角色動畫輔助 ----------------
+    // ---------------- Character animation helpers ----------------
 
-    /// <summary>抽卡期間把 Animator 切到 UnscaledTime,讓 timeScale=0 時動畫仍會播放。</summary>
+    /// <summary>During the draw, switch the Animator to UnscaledTime so the animation still plays while timeScale=0.</summary>
     private void BeginAnimOverride()
     {
         if (playerAnimator == null || _animOverridden) return;
@@ -192,7 +192,7 @@ public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
         _animOverridden = true;
     }
 
-    /// <summary>還原 Animator 原本的更新模式。</summary>
+    /// <summary>Restore the Animator's original update mode.</summary>
     private void EndAnimOverride()
     {
         if (playerAnimator == null || !_animOverridden) return;
@@ -200,14 +200,14 @@ public class SkillDrawCinematic : MonoBehaviour, ISkillDrawPresenter
         _animOverridden = false;
     }
 
-    /// <summary>播放指定動畫狀態 (狀態不存在則略過)。</summary>
+    /// <summary>Play the given animation state (skipped if the state does not exist).</summary>
     private void PlayState(string state)
     {
         if (!HasState(state)) return;
         playerAnimator.Play(Animator.StringToHash(state), 0, 0f);
     }
 
-    /// <summary>Animator 的 Base Layer 是否存在指定狀態。</summary>
+    /// <summary>Whether the given state exists on the Animator's Base Layer.</summary>
     private bool HasState(string state)
     {
         if (playerAnimator == null || string.IsNullOrEmpty(state)) return false;

@@ -1,21 +1,21 @@
 using UnityEngine;
 
 /// <summary>
-/// 按鈕:偵測上方是否有玩家或殘影壓著 (Physics2D.OverlapBox)。
-/// 不需要實體碰撞器,純粹當作偵測區 + 視覺。
+/// Button: detects whether a player or ghost is pressing on it from above (Physics2D.OverlapBox).
+/// Does not need a solid collider; acts purely as a detection zone plus visual.
 /// </summary>
 public class PressButton : MonoBehaviour
 {
-    [Tooltip("按鈕代號 (A/B/C)")]
+    [Tooltip("Button ID (A/B/C)")]
     public string id = "A";
 
-    [Tooltip("辨識玩家用的 Tag")]
+    [Tooltip("Tag used to identify the player")]
     public string playerTag = "Player";
 
-    [Tooltip("偵測區相對按鈕中心的偏移")]
+    [Tooltip("Offset of the detection zone relative to the button center")]
     public Vector2 checkOffset = new Vector2(0f, 0.5f);
 
-    [Tooltip("偵測區大小")]
+    [Tooltip("Detection zone size")]
     public Vector2 checkSize = new Vector2(1.0f, 1.0f);
 
     public bool IsPressed { get; private set; }
@@ -46,7 +46,7 @@ public class PressButton : MonoBehaviour
             }
         }
 
-        // 狀態改變時播放音效
+        // Play a sound effect when the state changes
         if (pressed && !IsPressed)
         {
             if (SoundManager.Instance != null)
@@ -67,7 +67,7 @@ public class PressButton : MonoBehaviour
         if (_sr != null)
             _sr.color = IsPressed ? Color.Lerp(_baseColor, Color.white, 0.5f) : _baseColor;
 
-        // 壓下時壓扁
+        // Squash down when pressed
         transform.localScale = IsPressed
             ? new Vector3(_baseScale.x, _baseScale.y * 0.5f, _baseScale.z)
             : _baseScale;

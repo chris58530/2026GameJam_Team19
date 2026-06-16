@@ -251,7 +251,7 @@ public class DeadBodyManager : MonoBehaviour, ILevelFailHandler
     {
         var style = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold };
         string armedText = (skillSystem != null && skillSystem.HasUsableDeck())
-            ? "    本命技能: " + CorpseSkillNames.ToDisplay(ArmedSkill) : "";
+            ? "    Skill: " + CorpseSkillNames.ToDisplay(ArmedSkill) : "";
         GUI.Label(new Rect(16, 12, 800, 30),
             "Loops: " + Deaths + (HasKey ? "    Key: YES" : "    Key: NO") + armedText, style);
 
@@ -273,7 +273,7 @@ public class DeadBodyManager : MonoBehaviour, ILevelFailHandler
             var sub = new GUIStyle(GUI.skin.label) { fontSize = 26, fontStyle = FontStyle.Bold };
             sub.normal.textColor = Color.white;
             GUI.Label(new Rect(0, Screen.height * 0.50f, Screen.width, 40),
-                _failReason + "   重新開始...", Centered(sub));
+                _failReason + "   Restarting...", Centered(sub));
         }
 
         if (Won)

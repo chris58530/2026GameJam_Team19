@@ -5,25 +5,25 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// 主選單控制器，掛在 MainMenuScene 的 Canvas 上。
+/// Main menu controller, attached to the Canvas in MainMenuScene.
 /// 
-/// Inspector 設定（拖入 .unity 場景檔案即可，名稱自動同步）：
+/// Inspector setup (just drag in the .unity scene file, the name syncs automatically):
 ///   - targetSceneAsset: LevelSelectorScene.unity
 /// 
-/// 按鈕連接：
-///   - Start Game 按鈕 → StartGame()
-///   - Quit Game 按鈕  → QuitGame()
-///   - Settings 按鈕   → OpenSettings()（placeholder）
+/// Button connections:
+///   - Start Game button -> StartGame()
+///   - Quit Game button  -> QuitGame()
+///   - Settings button   -> OpenSettings() (placeholder)
 /// </summary>
 public class MainMenuController : MonoBehaviour
 {
 #if UNITY_EDITOR
-    [Header("場景設定（拖入 .unity 場景檔案，名稱自動同步）")]
-    [Tooltip("按下 Start Game 時前往的場景")]
+    [Header("Scene setup (drag in the .unity scene file, the name syncs automatically)")]
+    [Tooltip("The scene to go to when Start Game is pressed")]
     [SerializeField] private SceneAsset targetSceneAsset;
 #endif
 
-    [Header("場景名稱（由上方 SceneAsset 自動填入）")]
+    [Header("Scene name (auto-filled from the SceneAsset above)")]
     [SerializeField] private string targetSceneName = "LevelSelectorScene";
 
 #if UNITY_EDITOR
@@ -35,7 +35,7 @@ public class MainMenuController : MonoBehaviour
 #endif
 
     /// <summary>
-    /// Start Game 按鈕呼叫。前往關卡選擇畫面。
+    /// Called by the Start Game button. Goes to the level selection screen.
     /// </summary>
     public void StartGame()
     {
@@ -44,7 +44,7 @@ public class MainMenuController : MonoBehaviour
 
         if (SceneLoadManager.Instance == null)
         {
-            Debug.LogError("[MainMenuController] SceneLoadManager 不存在！請確認場景中有 SceneLoadManager 物件。");
+            Debug.LogError("[MainMenuController] SceneLoadManager does not exist! Please make sure the scene has a SceneLoadManager object.");
             return;
         }
 
@@ -52,11 +52,11 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// Quit Game 按鈕呼叫。
+    /// Called by the Quit Game button.
     /// </summary>
     public void QuitGame()
     {
-        Debug.Log("[MainMenuController] 退出遊戲");
+        Debug.Log("[MainMenuController] Quitting game");
 
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
@@ -66,10 +66,10 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// Settings 按鈕呼叫（目前為 placeholder）。
+    /// Called by the Settings button (currently a placeholder).
     /// </summary>
     public void OpenSettings()
     {
-        Debug.Log("[MainMenuController] Settings 功能尚未實作。");
+        Debug.Log("[MainMenuController] Settings feature is not implemented yet.");
     }
 }

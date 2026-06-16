@@ -1,27 +1,27 @@
 using UnityEngine;
 
 /// <summary>
-/// 隨機彈射屍體 (百威)。
-/// 玩家碰撞器一接觸到這具屍體,立刻朝「上半圓的隨機角度」彈飛。
-/// 彈飛力道沿用玩家本身的原始跳躍力 (jumpForce),所以距離/高度 = 原始設定。
-/// 內建短冷卻,避免接觸的同一瞬間連續觸發。
+/// Random-launch corpse (Budweiser).
+/// As soon as the player's collider touches this corpse, the player is flung off at "a random angle in the upper half-circle".
+/// The launch force reuses the player's own original jump force (jumpForce), so the distance/height match the original setting.
+/// It has a short built-in cooldown to avoid repeated triggering within the same instant of contact.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class CorpseSkill_RandomLaunch : MonoBehaviour
 {
-    [Tooltip("隨機彈飛角度下限 (度,從 +X 軸逆時針量;90 = 正上方)")]
+    [Tooltip("Minimum random launch angle (degrees, measured counter-clockwise from +X axis; 90 = straight up)")]
     public float minAngle = 50f;
 
-    [Tooltip("隨機彈飛角度上限 (度)")]
+    [Tooltip("Maximum random launch angle (degrees)")]
     public float maxAngle = 130f;
 
-    [Tooltip("觸發後的冷卻秒數 (避免同一次接觸連續彈射)")]
+    [Tooltip("Cooldown in seconds after triggering (avoids repeated launches within the same contact)")]
     public float cooldown = 0.4f;
 
-    [Tooltip("找不到玩家原始跳躍力時的後備力道")]
+    [Tooltip("Fallback force used when the player's original jump force can't be found")]
     public float fallbackForce = 14f;
 
-    [Tooltip("玩家 Tag")]
+    [Tooltip("Player Tag")]
     public string playerTag = "Player";
 
     private float _cooldownTimer;
@@ -49,12 +49,12 @@ public class CorpseSkill_RandomLaunch : MonoBehaviour
         var rb = other.attachedRigidbody;
         if (rb == null) return;
 
-        // 力道 = 玩家原始跳躍力 (距離/高度沿用原始設定)
+        // Force = player's original jump force (distance/height reuse the original setting)
         float force = fallbackForce;
         var pc = rb.GetComponent<PlayerController2D>();
         if (pc != null) force = pc.jumpForce;
 
-        // 上半圓隨機方向
+        // Random direction in the upper half-circle
         float angleDeg = Random.Range(minAngle, maxAngle);
         float rad = angleDeg * Mathf.Deg2Rad;
         Vector2 dir = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));

@@ -43,6 +43,10 @@ sysinfo.txt
 *.unitypackage
 *.app
 
+# WebGL build outputs
+/Web2026_T19/
+/Web2026_T19.zip
+
 # Crashlytics generated file
 crashlytics-build.properties
 

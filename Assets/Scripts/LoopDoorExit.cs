@@ -1,15 +1,15 @@
 using UnityEngine;
 
 /// <summary>
-/// 大門:門開啟 (三按鈕全壓) 且玩家進入時通關。
-/// 用 OnTriggerStay2D,因為玩家可能先站在門口、按鈕之後才湊齊。
+/// Main door: clears the level when the door is open (all three buttons pressed) and the player enters.
+/// Uses OnTriggerStay2D, because the player may stand at the door first and the buttons only line up afterward.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public class LoopDoorExit : MonoBehaviour
 {
     public string playerTag = "Player";
 
-    [Tooltip("玩家到達門口時播放的音效名稱")]
+    [Tooltip("Name of the sound effect played when the player reaches the door")]
     public string arriveSfxName = "Conv-1";
 
     private LoopManager _manager;

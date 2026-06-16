@@ -3,35 +3,35 @@ using UnityEngine.UI;
 using UnityEngine.Video;
 
 /// <summary>
-/// 結局場景：播放 Victory/Fail 影片，播完顯示按鈕。
+/// Ending scene: plays the Victory/Fail video, then shows buttons when it finishes.
 /// 
-/// 設定：
-///   1. 建立 Canvas
-///   2. Canvas 底下建立 ButtonsPanel（Retry/Back/Quit），預設 SetActive(false)
-///   3. 掛此腳本，拖入影片和按鈕
-///   4. 不需要建 RawImage，腳本自動處理
+/// Setup:
+///   1. Create a Canvas
+///   2. Under the Canvas, create a ButtonsPanel (Retry/Back/Quit), default SetActive(false)
+///   3. Attach this script and drag in the videos and buttons
+///   4. No need to create a RawImage, the script handles it automatically
 /// </summary>
 public class EndingUI : MonoBehaviour
 {
     public static EndingUI Instance { get; private set; }
 
-    [Header("影片")]
-    [Tooltip("勝利影片")]
+    [Header("Videos")]
+    [Tooltip("Victory video")]
     [SerializeField] private VideoClip victoryClip;
 
-    [Tooltip("失敗影片")]
+    [Tooltip("Fail video")]
     [SerializeField] private VideoClip failClip;
 
-    [Header("按鈕面板")]
-    [Tooltip("包含所有按鈕的面板（預設隱藏）")]
+    [Header("Buttons Panel")]
+    [Tooltip("Panel containing all buttons (hidden by default)")]
     [SerializeField] private GameObject buttonsPanel;
 
-    [Header("按鈕")]
+    [Header("Buttons")]
     [SerializeField] private Button retryButton;
     [SerializeField] private Button backToTitleButton;
     [SerializeField] private Button quitButton;
 
-    [Header("無影片時")]
+    [Header("When No Video")]
     [SerializeField] private float noVideoDelay = 3f;
 
     private VideoPlayer videoPlayer;
@@ -64,11 +64,11 @@ public class EndingUI : MonoBehaviour
             return;
         }
 
-        // 建立 RenderTexture
+        // Create the RenderTexture
         rt = new RenderTexture(1920, 1080, 0);
         rt.Create();
 
-        // 建立 VideoPlayer
+        // Create the VideoPlayer
         videoPlayer = gameObject.AddComponent<VideoPlayer>();
         videoPlayer.clip = clip;
         videoPlayer.playOnAwake = false;
@@ -77,7 +77,7 @@ public class EndingUI : MonoBehaviour
         videoPlayer.renderMode = VideoRenderMode.RenderTexture;
         videoPlayer.targetTexture = rt;
 
-        // 自動建立 RawImage
+        // Automatically create a RawImage
         var rawImageObj = new GameObject("VideoImage");
         rawImageObj.transform.SetParent(transform, false);
         rawImageObj.transform.SetAsFirstSibling();
